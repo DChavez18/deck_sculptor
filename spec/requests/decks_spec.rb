@@ -52,10 +52,12 @@ RSpec.describe "Decks", type: :request do
   end
 
   describe "GET /decks/:id/suggestions" do
-    let(:scryfall_service) { instance_double(ScryfallService, commander_suggestions: []) }
+    let(:suggestion_engine) { instance_double(SuggestionEngine, suggestions: []) }
+    let(:edhrec_service)    { instance_double(EdhrecService, top_cards: []) }
 
     before do
-      allow(ScryfallService).to receive(:new).and_return(scryfall_service)
+      allow(SuggestionEngine).to receive(:new).and_return(suggestion_engine)
+      allow(EdhrecService).to receive(:new).and_return(edhrec_service)
       get suggestions_deck_path(deck)
     end
 
@@ -63,7 +65,12 @@ RSpec.describe "Decks", type: :request do
   end
 
   describe "GET /decks/:id/analysis" do
-    before { get analysis_deck_path(deck) }
+    let(:combo_service) { instance_double(ComboFinderService, find_combos: []) }
+
+    before do
+      allow(ComboFinderService).to receive(:new).and_return(combo_service)
+      get analysis_deck_path(deck)
+    end
 
     it { expect(response).to have_http_status(:ok) }
   end

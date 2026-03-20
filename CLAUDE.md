@@ -31,8 +31,9 @@ Named after Jace, the Mind Sculptor.
 ## Current status
 - Phase 1 complete and merged — models, migrations, RSpec setup
 - Phase 2 complete and merged — ScryfallService, WebMock, CardCache
-- Phase 3 complete — UI, controllers, views, CardCategorizer, Stimulus
-- 95 examples, 0 failures
+- Phase 3 complete and merged — UI, controllers, views, CardCategorizer, Stimulus
+- Phase 4 complete — SuggestionEngine, EdhrecService, ComboFinderService, README
+- 135 examples, 0 failures
 - CI green on all 4 checks
 
 ## What was built in Phase 2
@@ -51,6 +52,15 @@ Named after Jace, the Mind Sculptor.
 - Views — dark blue Tailwind theme throughout
 - commander_search_controller.js — debounced Turbo Frame search
 
+## What was built in Phase 4
+- SuggestionEngine — scores cards by keyword synergy, curve gap, category fill
+- EdhrecService — fetches EDHREC commander data, caches in CardCache
+- ComboFinderService — queries Commander Spellbook for combo detection
+- Updated suggestions view — score badges, reason tags, Add to Deck button
+- Updated analysis view — combos section with Spellbook links
+- Updated show view — progress bar, color pips, quick stats
+- README.md — full project documentation
+
 ## Models overview
 - Commander — Scryfall card data for the chosen commander
 - Deck — belongs to commander, holds 99 DeckCards
@@ -58,10 +68,9 @@ Named after Jace, the Mind Sculptor.
 - CardCache — local Scryfall response cache, 7-day TTL
 
 ## Upcoming phases
-- Phase 4: Suggestion engine — synergy scoring, recommendations
-- Phase 5: Strategy analysis — mana curve, archetypes, color identity
-- Phase 6: Commander profile — EDHREC data, combo finder
+- Phase 5: Strategy analysis — archetype detection, color gap analysis
+- Phase 6: Commander profile — full EDHREC integration, combo synergy
 - Phase 7: Deployment to Railway
 
 ## Current task
-Starting Phase 4 — suggestion engine improvements and EDHREC integration.
+Starting Phase 5 — strategy analysis and archetype detection.

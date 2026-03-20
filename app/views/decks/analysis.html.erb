@@ -47,3 +47,51 @@
     <% end %>
   </div>
 </div>
+
+<%# Combos section %>
+<div class="mt-6 bg-slate-800 border border-slate-700 rounded-xl p-5">
+  <h2 class="text-white font-semibold mb-4">Combo Potential <span class="text-slate-500 text-xs font-normal ml-1">via Commander Spellbook</span></h2>
+
+  <% if @combos.empty? %>
+    <div class="text-center py-8 border border-dashed border-slate-600 rounded-xl">
+      <p class="text-slate-400 text-sm">No combos detected for this commander.</p>
+      <a href="https://commanderspellbook.com" target="_blank" rel="noopener noreferrer"
+         class="text-blue-400 hover:text-blue-300 text-xs mt-2 inline-block">
+        Browse all combos on Commander Spellbook →
+      </a>
+    </div>
+  <% else %>
+    <div class="space-y-4">
+      <% @combos.each_with_index do |combo, i| %>
+        <div class="border border-slate-700 rounded-lg p-4">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <%# Cards involved %>
+              <div class="flex flex-wrap gap-1.5 mb-2">
+                <% combo[:cards].each do |card_name| %>
+                  <span class="bg-slate-700 text-slate-200 text-xs px-2 py-0.5 rounded-full font-medium"><%= card_name %></span>
+                <% end %>
+              </div>
+
+              <%# Result %>
+              <% if combo[:result].present? %>
+                <p class="text-green-400 text-sm font-medium mb-1">⚡ <%= combo[:result] %></p>
+              <% end %>
+
+              <%# Steps %>
+              <% if combo[:steps].present? %>
+                <p class="text-slate-400 text-xs leading-relaxed line-clamp-3"><%= combo[:steps] %></p>
+              <% end %>
+            </div>
+
+            <a href="https://commanderspellbook.com/search/?q=card%3A<%= ERB::Util.url_encode(combo[:cards].first.to_s) %>"
+               target="_blank" rel="noopener noreferrer"
+               class="shrink-0 text-blue-400 hover:text-blue-300 text-xs whitespace-nowrap">
+              View →
+            </a>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

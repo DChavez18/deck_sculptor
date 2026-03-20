@@ -23,13 +23,15 @@ class DecksController < ApplicationController
   end
 
   def suggestions
-    commander_card = @deck.commander.raw_data.presence || {}
-    @suggestions = ScryfallService.new.commander_suggestions(commander_card)
+    @suggestions = SuggestionEngine.new(@deck).suggestions
+    @edhrec_top  = EdhrecService.new.top_cards(@deck.commander.name)
   end
 
   def analysis
-    @mana_curve = @deck.mana_curve
+    @mana_curve        = @deck.mana_curve
     @cards_by_category = @deck.cards_by_category
+    deck_card_names    = [ @deck.commander.name ] + @deck.deck_cards.pluck(:card_name)
+    @combos            = ComboFinderService.new.find_combos(deck_card_names)
   end
 
   private
