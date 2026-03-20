@@ -31,7 +31,7 @@ RSpec.describe DeckCard, type: :model do
   describe "#color_identity_array" do
     it "splits a comma-separated string" do
       card = build(:deck_card, color_identity: "U,B")
-      expect(card.color_identity_array).to eq(["U", "B"])
+      expect(card.color_identity_array).to eq([ "U", "B" ])
     end
   end
 end

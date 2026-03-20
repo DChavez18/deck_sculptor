@@ -15,7 +15,7 @@ RSpec.describe Commander, type: :model do
   describe "#color_identity_array" do
     it "splits the color_identity string into an array" do
       commander = build(:commander, color_identity: "U,B,G")
-      expect(commander.color_identity_array).to eq(["U", "B", "G"])
+      expect(commander.color_identity_array).to eq([ "U", "B", "G" ])
     end
 
     it "returns an empty array when colorless" do
@@ -27,7 +27,7 @@ RSpec.describe Commander, type: :model do
   describe "#color_names" do
     it "maps color letters to full names" do
       commander = build(:commander, color_identity: "W,U")
-      expect(commander.color_names).to eq(["White", "Blue"])
+      expect(commander.color_names).to eq([ "White", "Blue" ])
     end
   end
 

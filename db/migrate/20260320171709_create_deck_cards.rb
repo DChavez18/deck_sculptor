@@ -15,7 +15,7 @@ class CreateDeckCards < ActiveRecord::Migration[8.0]
       t.jsonb      :raw_data,       default: {}
       t.timestamps
     end
-    add_index :deck_cards, [:deck_id, :scryfall_id], unique: true
+    add_index :deck_cards, [ :deck_id, :scryfall_id ], unique: true
     add_index :deck_cards, :category
   end
 end
