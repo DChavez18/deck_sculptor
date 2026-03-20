@@ -30,8 +30,16 @@ Named after Jace, the Mind Sculptor.
 
 ## Current status
 - Phase 1 complete and merged — models, migrations, RSpec setup
-- Models: Commander, Deck, DeckCard, CardCache
-- 42 examples, 0 failures locally
+- Phase 2 complete — ScryfallService with 6 methods, WebMock tests
+- 69 examples, 0 failures
+- CI green on all 4 checks
+
+## What was built in Phase 2
+- app/services/scryfall_service.rb — search_commander, find_commander,
+  search_cards, find_card_by_id, cards_by_color_identity, commander_suggestions
+- spec/services/scryfall_service_spec.rb — 24 examples, all WebMock stubbed
+- CardCache.fetch_by_name — ILIKE partial match added to model
+- WebMock added to test group
 
 ## Models overview
 - Commander — Scryfall card data for the chosen commander
@@ -39,23 +47,12 @@ Named after Jace, the Mind Sculptor.
 - DeckCard — a card in a deck with category, cmc, color_identity (string)
 - CardCache — local Scryfall response cache, 7-day TTL
 
+## Upcoming phases
+- Phase 3 (current): Deck input UI — paste a decklist, search commanders
+- Phase 4: Suggestion engine — synergy scoring, recommendations
+- Phase 5: Strategy analysis — mana curve, archetypes, color identity
+- Phase 6: Commander profile — EDHREC data, combo finder
+- Phase 7: Deployment to Railway
+
 ## Current task
-Fixing CI failures on the phase-1-setup PR before merging.
-Three jobs failing: lint (rubocop), scan_ruby (brakeman), test (rspec).
-
-Run these locally and report full output before fixing anything:
-1. bundle exec brakeman --no-pager
-2. bundle exec rspec
-3. bundle exec rubocop
-```
-
-Create that file, then at the start of every Claude Code session you just say "read CLAUDE.md and let's continue" and it's fully up to speed instantly. We should also make it a habit to update it at the end of each phase.
-
-Once you've created it, start a new Claude Code session and paste:
-```
-Read CLAUDE.md then run these three commands and show me
-the full output before fixing anything:
-
-1. bundle exec brakeman --no-pager
-2. bundle exec rspec
-3. bundle exec rubocop
+Starting Phase 3 — deck input UI with Hotwire/Turbo/Stimulus.
