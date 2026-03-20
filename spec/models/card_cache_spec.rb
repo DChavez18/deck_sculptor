@@ -36,6 +36,22 @@ RSpec.describe CardCache, type: :model do
     end
   end
 
+  describe ".fetch_by_name" do
+    it "returns data for a fresh entry matching a partial name" do
+      card = create(:card_cache, name: "Atraxa, Praetors' Voice", cached_at: 1.hour.ago)
+      expect(CardCache.fetch_by_name("Atraxa")).to eq(card.data)
+    end
+
+    it "returns nil for a stale entry" do
+      create(:card_cache, :stale, name: "Atraxa, Praetors' Voice")
+      expect(CardCache.fetch_by_name("Atraxa")).to be_nil
+    end
+
+    it "returns nil when no match exists" do
+      expect(CardCache.fetch_by_name("Nonexistent")).to be_nil
+    end
+  end
+
   describe ".store" do
     it "creates a new cache entry" do
       data = { "name" => "Island", "cmc" => 0 }

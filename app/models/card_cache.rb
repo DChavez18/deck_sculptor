@@ -10,6 +10,12 @@ class CardCache < ApplicationRecord
     nil
   end
 
+  def self.fetch_by_name(name)
+    record = find_by("name ILIKE ?", "%#{name}%")
+    return record.data if record && !record.stale?
+    nil
+  end
+
   def self.store(scryfall_id, name, data)
     record = find_or_initialize_by(scryfall_id: scryfall_id)
     record.update!(name: name, data: data, cached_at: Time.current)
