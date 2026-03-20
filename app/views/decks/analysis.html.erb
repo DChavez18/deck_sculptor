@@ -1,0 +1,49 @@
+<div class="mb-6 flex items-center gap-4">
+  <%= link_to "← Back to Deck", deck_path(@deck), class: "text-slate-400 hover:text-white text-sm" %>
+  <h1 class="text-2xl font-bold text-white">Analysis: <%= @deck.name %></h1>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <%# Mana curve %>
+  <div class="bg-slate-800 border border-slate-700 rounded-xl p-5">
+    <h2 class="text-white font-semibold mb-4">Mana Curve</h2>
+    <% if @mana_curve.empty? %>
+      <p class="text-slate-400 text-sm">No non-land cards yet.</p>
+    <% else %>
+      <% max_count = @mana_curve.values.max %>
+      <div class="space-y-2">
+        <% @mana_curve.sort_by { |cmc, _| cmc.to_f }.each do |cmc, count| %>
+          <div class="flex items-center gap-3">
+            <span class="text-slate-400 text-xs w-6 text-right"><%= cmc %></span>
+            <div class="flex-1 bg-slate-700 rounded-full h-4 overflow-hidden">
+              <div class="bg-blue-500 h-4 rounded-full" style="width: <%= (count.to_f / max_count * 100).round %>%"></div>
+            </div>
+            <span class="text-slate-300 text-xs w-6"><%= count %></span>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <%# Category breakdown %>
+  <div class="bg-slate-800 border border-slate-700 rounded-xl p-5">
+    <h2 class="text-white font-semibold mb-4">Category Breakdown</h2>
+    <% if @cards_by_category.empty? %>
+      <p class="text-slate-400 text-sm">No cards yet.</p>
+    <% else %>
+      <div class="space-y-2">
+        <% total = @deck.card_count.to_f %>
+        <% @cards_by_category.each do |category, cards| %>
+          <% count = cards.sum(&:quantity) %>
+          <div class="flex items-center gap-3">
+            <span class="text-slate-400 text-xs w-24 capitalize"><%= category %></span>
+            <div class="flex-1 bg-slate-700 rounded-full h-4 overflow-hidden">
+              <div class="bg-blue-500 h-4 rounded-full" style="width: <%= total > 0 ? (count / total * 100).round : 0 %>%"></div>
+            </div>
+            <span class="text-slate-300 text-xs w-6"><%= count %></span>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

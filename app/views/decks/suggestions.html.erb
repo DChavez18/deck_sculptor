@@ -1,0 +1,30 @@
+<div class="mb-6 flex items-center gap-4">
+  <%= link_to "← Back to Deck", deck_path(@deck), class: "text-slate-400 hover:text-white text-sm" %>
+  <h1 class="text-2xl font-bold text-white">Suggestions for <%= @deck.name %></h1>
+</div>
+
+<% if @suggestions.empty? %>
+  <div class="text-center py-16 border border-dashed border-slate-600 rounded-xl">
+    <p class="text-slate-400">No suggestions found.</p>
+    <p class="text-slate-500 text-sm mt-1">Try adding more cards to your deck first.</p>
+  </div>
+<% else %>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <% @suggestions.each do |card| %>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+        <% image_url = card.dig("image_uris", "normal") || card.dig("card_faces", 0, "image_uris", "normal") %>
+        <% if image_url %>
+          <img src="<%= image_url %>" alt="<%= card["name"] %>" class="w-full h-40 object-cover object-top">
+        <% end %>
+        <div class="p-4">
+          <h3 class="text-white font-semibold text-sm"><%= card["name"] %></h3>
+          <p class="text-slate-400 text-xs mt-0.5"><%= card["type_line"] %></p>
+          <% if card["mana_cost"].present? %>
+            <p class="text-slate-500 text-xs font-mono mt-1"><%= card["mana_cost"] %></p>
+          <% end %>
+          <p class="text-slate-300 text-xs mt-2 leading-relaxed line-clamp-3"><%= card["oracle_text"] %></p>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>

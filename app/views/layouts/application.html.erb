@@ -10,20 +10,42 @@
 
     <%= yield :head %>
 
-    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
-    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
-
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
-    <main class="container mx-auto mt-28 px-5 flex">
+  <body class="bg-slate-900 text-slate-100 min-h-screen">
+    <nav class="bg-slate-800 border-b border-slate-700 px-6 py-4">
+      <div class="max-w-6xl mx-auto flex items-center justify-between">
+        <%= link_to "Deck Sculptor", root_path, class: "text-blue-400 font-bold text-xl tracking-wide hover:text-blue-300" %>
+        <div class="flex gap-4 items-center">
+          <%= link_to "My Decks", decks_path, class: "text-slate-300 hover:text-white text-sm" %>
+          <%= link_to "New Deck", new_deck_path, class: "bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-md font-medium" %>
+        </div>
+      </div>
+    </nav>
+
+    <% if notice %>
+      <div class="max-w-6xl mx-auto mt-4 px-6">
+        <div class="bg-blue-900 border border-blue-700 text-blue-200 px-4 py-3 rounded-md text-sm">
+          <%= notice %>
+        </div>
+      </div>
+    <% end %>
+
+    <% if alert %>
+      <div class="max-w-6xl mx-auto mt-4 px-6">
+        <div class="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-md text-sm">
+          <%= alert %>
+        </div>
+      </div>
+    <% end %>
+
+    <main class="max-w-6xl mx-auto px-6 py-8">
       <%= yield %>
     </main>
   </body>

@@ -1,0 +1,26 @@
+<%= turbo_frame_tag "commander_results" do %>
+  <% if @results.empty? %>
+    <p class="text-slate-500 text-sm mt-3">No commanders found.</p>
+  <% else %>
+    <div class="mt-3 space-y-2">
+      <% @results.each do |card| %>
+        <div class="bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 flex items-center justify-between hover:border-blue-500 transition-colors">
+          <div>
+            <p class="text-white text-sm font-medium"><%= card["name"] %></p>
+            <p class="text-slate-400 text-xs"><%= card["type_line"] %></p>
+            <p class="text-slate-500 text-xs font-mono"><%= card["mana_cost"] %></p>
+          </div>
+          <button
+            type="button"
+            data-action="commander-search#select"
+            data-commander-id="<%= card["id"] %>"
+            data-commander-name="<%= card["name"] %>"
+            class="text-blue-400 hover:text-blue-300 text-sm font-medium shrink-0 ml-4"
+          >
+            Select
+          </button>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

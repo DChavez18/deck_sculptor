@@ -30,8 +30,9 @@ Named after Jace, the Mind Sculptor.
 
 ## Current status
 - Phase 1 complete and merged — models, migrations, RSpec setup
-- Phase 2 complete — ScryfallService with 6 methods, WebMock tests
-- 69 examples, 0 failures
+- Phase 2 complete and merged — ScryfallService, WebMock, CardCache
+- Phase 3 complete — UI, controllers, views, CardCategorizer, Stimulus
+- 95 examples, 0 failures
 - CI green on all 4 checks
 
 ## What was built in Phase 2
@@ -41,6 +42,15 @@ Named after Jace, the Mind Sculptor.
 - CardCache.fetch_by_name — ILIKE partial match added to model
 - WebMock added to test group
 
+## What was built in Phase 3
+- config/routes.rb — full route set
+- CardCategorizer service — categorizes cards by type_line
+- CommandersController — search (Turbo Frame), show
+- DecksController — index, new, create, show, suggestions, analysis
+- DeckCardsController — create with auto-categorization, destroy
+- Views — dark blue Tailwind theme throughout
+- commander_search_controller.js — debounced Turbo Frame search
+
 ## Models overview
 - Commander — Scryfall card data for the chosen commander
 - Deck — belongs to commander, holds 99 DeckCards
@@ -48,11 +58,10 @@ Named after Jace, the Mind Sculptor.
 - CardCache — local Scryfall response cache, 7-day TTL
 
 ## Upcoming phases
-- Phase 3 (current): Deck input UI — paste a decklist, search commanders
 - Phase 4: Suggestion engine — synergy scoring, recommendations
 - Phase 5: Strategy analysis — mana curve, archetypes, color identity
 - Phase 6: Commander profile — EDHREC data, combo finder
 - Phase 7: Deployment to Railway
 
 ## Current task
-Starting Phase 3 — deck input UI with Hotwire/Turbo/Stimulus.
+Starting Phase 4 — suggestion engine improvements and EDHREC integration.
