@@ -33,10 +33,10 @@ Named after Jace, the Mind Sculptor.
 - Phase 2 complete and merged — ScryfallService, WebMock, CardCache
 - Phase 3 complete and merged — UI, controllers, views, CardCategorizer, Stimulus
 - Phase 4 complete and merged — SuggestionEngine, EdhrecService, ComboFinderService, README
-- Phase 4 hotfix complete — commander selection wired, bracket level 1–5
-- 135 examples, 0 failures
-- CI green on all 4 checks
-- Currently on branch: `phase-4-hotfix` — ready to PR into main
+- Phase 4 hotfix (branch: phase-4-hotfix) complete and merged — commander selection, bracket level
+- Phase 4 hotfix-2 complete — Add Card live search, card images in deck list
+- 156 examples, 0 failures
+- Currently on branch: `phase-4-hotfix-2` — ready to PR into main
 
 ## What was built in Phase 2
 - app/services/scryfall_service.rb — search_commander, find_commander,
@@ -70,6 +70,14 @@ Named after Jace, the Mind Sculptor.
 - Renamed power_level → bracket_level (1–5 scale) via migration
 - Deck::BRACKET_LEVELS constant, validation, views, factory, and specs all updated
 
+## What was fixed in Phase 4 hotfix-2
+- Add Card form now uses live search dropdown via CardsController#search
+- ScryfallService#find_card_by_name added (fuzzy name lookup with caching)
+- DeckCardsController#create falls back to name lookup when scryfall_id is blank
+- Card images (small thumbnails) shown in deck card list using Scryfall small CDN URL
+- card_search_controller.js — debounced search, populates hidden inputs on select,
+  validates before submit, hides dropdown on outside click
+
 ## Models overview
 - Commander — Scryfall card data for the chosen commander
 - Deck — belongs to commander, holds 99 DeckCards
@@ -82,5 +90,5 @@ Named after Jace, the Mind Sculptor.
 - Phase 7: Deployment to Railway
 
 ## Current task
-Phase 4 hotfix is complete. Commit and push phase-4-hotfix, PR into main,
+Phase 4 hotfix-2 is complete. Commit and push phase-4-hotfix-2, PR into main,
 then create branch phase-5-strategy and begin Phase 5.

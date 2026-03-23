@@ -1,0 +1,21 @@
+<% if @results.empty? %>
+  <div class="px-4 py-3 text-slate-500 text-sm">No cards found.</div>
+<% else %>
+  <% @results.first(10).each do |card| %>
+    <% image_url = card.dig("image_uris", "small") || card.dig("card_faces", 0, "image_uris", "small") %>
+    <div class="flex items-center gap-3 px-3 py-2 hover:bg-slate-700 cursor-pointer transition-colors"
+         data-action="click->card-search#select"
+         data-card-id="<%= card["id"] %>"
+         data-card-name="<%= card["name"] %>">
+      <% if image_url %>
+        <img src="<%= image_url %>" alt="<%= card["name"] %>" class="h-12 w-9 object-cover rounded shrink-0">
+      <% else %>
+        <div class="h-12 w-9 bg-slate-600 rounded flex items-center justify-center text-slate-400 shrink-0">🎴</div>
+      <% end %>
+      <div class="flex-1 min-w-0">
+        <p class="text-white text-sm font-medium truncate"><%= card["name"] %></p>
+        <p class="text-slate-500 text-xs font-mono"><%= card["mana_cost"] %></p>
+      </div>
+    </div>
+  <% end %>
+<% end %>
