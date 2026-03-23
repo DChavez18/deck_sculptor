@@ -4,6 +4,6 @@ FactoryBot.define do
     name        { Faker::Lorem.words(number: 3).join(" ").titleize }
     description { Faker::Lorem.sentence }
     archetype   { Deck::ARCHETYPES.sample }
-    power_level { Faker::Number.between(from: 1, to: 10) }
+    bracket_level { Faker::Number.between(from: 1, to: 5) }
   end
 end

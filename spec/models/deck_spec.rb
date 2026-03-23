@@ -9,7 +9,7 @@ RSpec.describe Deck, type: :model do
   describe "validations" do
     it { should validate_presence_of(:name) }
     it { should validate_inclusion_of(:archetype).in_array(Deck::ARCHETYPES).allow_nil }
-    it { should validate_inclusion_of(:power_level).in_array(Deck::POWER_LEVELS).allow_nil }
+    it { should validate_inclusion_of(:bracket_level).in_array(Deck::BRACKET_LEVELS).allow_nil }
   end
 
   describe "#card_count" do

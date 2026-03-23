@@ -2,12 +2,12 @@ class Deck < ApplicationRecord
   belongs_to :commander
   has_many   :deck_cards, dependent: :destroy
 
-  ARCHETYPES   = %w[aggro combo control stax midrange goodstuff].freeze
-  POWER_LEVELS = (1..10).to_a.freeze
+  ARCHETYPES     = %w[aggro combo control stax midrange goodstuff].freeze
+  BRACKET_LEVELS = (1..5).to_a.freeze
 
   validates :name, presence: true
-  validates :archetype,   inclusion: { in: ARCHETYPES },   allow_nil: true
-  validates :power_level, inclusion: { in: POWER_LEVELS }, allow_nil: true
+  validates :archetype,      inclusion: { in: ARCHETYPES },     allow_nil: true
+  validates :bracket_level,  inclusion: { in: BRACKET_LEVELS }, allow_nil: true
 
   def card_count
     deck_cards.sum(:quantity)

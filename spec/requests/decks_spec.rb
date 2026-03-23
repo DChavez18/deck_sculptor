@@ -24,7 +24,7 @@ RSpec.describe "Decks", type: :request do
             name: "My Deck",
             commander_id: commander.id,
             archetype: "control",
-            power_level: 7
+            bracket_level: 3
           }
         }
       end
