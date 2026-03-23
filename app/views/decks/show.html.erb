@@ -140,10 +140,10 @@
               <div class="px-4 py-2 flex items-center justify-between">
                 <div class="flex items-center gap-3">
                   <% if card.image_uri.present? %>
-                    <img src="<%= card.image_uri %>" alt="<%= card.card_name %>"
-                         class="w-10 h-14 rounded object-cover shrink-0 border border-slate-600">
+                    <img src="<%= card.image_uri&.gsub('/normal/', '/small/') %>" alt="<%= card.card_name %>"
+                         class="w-8 h-11 rounded object-cover shrink-0 border border-slate-600">
                   <% else %>
-                    <div class="w-10 h-14 rounded bg-slate-700 border border-slate-600 shrink-0"></div>
+                    <div class="w-8 h-11 rounded bg-slate-700 border border-slate-600 shrink-0"></div>
                   <% end %>
                   <span class="text-slate-400 text-sm w-4 text-right shrink-0"><%= card.quantity %>×</span>
                   <span class="text-white text-sm"><%= card.card_name %></span>
