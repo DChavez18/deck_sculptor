@@ -89,15 +89,36 @@
       </div>
     </div>
 
-    <%# Add card form %>
-    <div class="bg-slate-800 border border-slate-700 rounded-xl p-5">
-      <h3 class="text-white font-semibold mb-4">Add Card</h3>
-      <%= form_with url: deck_deck_cards_path(@deck), method: :post, class: "flex gap-3" do |f| %>
-        <%= f.text_field :deck_card, placeholder: "Scryfall card name or ID...",
-            name: "deck_card[card_name]",
-            class: "flex-1 bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md px-4 py-2 focus:outline-none focus:border-blue-500 text-sm" %>
-        <%= f.hidden_field :deck_card, name: "deck_card[scryfall_id]", id: "deck_card_scryfall_id" %>
-        <%= f.submit "Add", class: "bg-blue-600 hover:bg-blue-500 text-white text-sm px-5 py-2 rounded-md font-medium cursor-pointer" %>
+    <%# Add card form with live search %>
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"
+         data-controller="card-search">
+      <h3 class="text-white font-semibold mb-3">Add Card</h3>
+
+      <%# Search input %>
+      <div class="relative mb-3">
+        <input type="text"
+               placeholder="Search for a card..."
+               autocomplete="off"
+               data-card-search-target="input"
+               data-action="input->card-search#search"
+               class="w-full bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md px-4 py-2 focus:outline-none focus:border-blue-500 text-sm">
+        <div data-card-search-target="dropdown"
+             class="hidden absolute z-10 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-72 overflow-y-auto divide-y divide-slate-700">
+        </div>
+      </div>
+
+      <%# Selected card / error feedback %>
+      <p data-card-search-target="selectedDisplay"
+         class="hidden text-blue-400 text-sm mb-3"></p>
+      <p data-card-search-target="error"
+         class="hidden text-red-400 text-sm mb-3">Please select a card from the search results.</p>
+
+      <%# Hidden form — submits scryfall_id + card_name %>
+      <%= form_with url: deck_deck_cards_path(@deck), method: :post, class: "flex justify-end",
+          data: { action: "submit->card-search#validateAndSubmit" } do |f| %>
+        <input type="hidden" name="deck_card[scryfall_id]" data-card-search-target="scryfallId">
+        <input type="hidden" name="deck_card[card_name]"   data-card-search-target="cardName">
+        <%= f.submit "Add Card", class: "bg-blue-600 hover:bg-blue-500 text-white text-sm px-5 py-2 rounded-md font-medium cursor-pointer" %>
       <% end %>
     </div>
 
