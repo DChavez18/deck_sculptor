@@ -14,6 +14,11 @@
         class="w-full bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md px-4 py-3 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
       >
 
+      <p data-commander-search-target="selectedDisplay"
+         class="text-slate-500 text-sm mt-2">
+        No commander selected.
+      </p>
+
       <%= turbo_frame_tag "commander_results" do %>
         <p class="text-slate-500 text-sm mt-3">Type a name to search commanders.</p>
       <% end %>
@@ -42,11 +47,7 @@
       </div>
 
       <div>
-        <%= f.label :commander_id, "Commander", class: "block text-sm text-slate-400 mb-1" %>
-        <%= f.select :commander_id,
-            Commander.order(:name).map { |c| [c.name, c.id] },
-            { include_blank: "— Select a commander —" },
-            class: "w-full bg-slate-700 border border-slate-600 text-white rounded-md px-4 py-3 focus:outline-none focus:border-blue-500" %>
+        <input type="hidden" name="deck[commander_scryfall_id]" id="deck_commander_scryfall_id">
       </div>
 
       <div>
@@ -58,8 +59,8 @@
       </div>
 
       <div>
-        <%= f.label :power_level, "Power Level (1–10)", class: "block text-sm text-slate-400 mb-1" %>
-        <%= f.number_field :power_level, min: 1, max: 10, value: 5,
+        <%= f.label :bracket_level, "Bracket Level (1–5)", class: "block text-sm text-slate-400 mb-1" %>
+        <%= f.number_field :bracket_level, min: 1, max: 5, value: 3,
             class: "w-full bg-slate-700 border border-slate-600 text-white rounded-md px-4 py-3 focus:outline-none focus:border-blue-500" %>
       </div>
 

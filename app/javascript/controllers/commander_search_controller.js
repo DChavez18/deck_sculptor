@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["input"]
+  static targets = ["input", "selectedDisplay"]
 
   connect() {
     this._debounceTimer = null
@@ -16,15 +16,17 @@ export default class extends Controller {
 
   select(event) {
     const commanderName = event.currentTarget.dataset.commanderName
-    const commanderSelect = document.querySelector("select[name='deck[commander_id]']")
+    const commanderScryfallId = event.currentTarget.dataset.commanderId
 
-    if (commanderSelect) {
-      const option = Array.from(commanderSelect.options).find(
-        (o) => o.text === commanderName
-      )
-      if (option) {
-        commanderSelect.value = option.value
-      }
+    const hiddenInput = document.getElementById("deck_commander_scryfall_id")
+    if (hiddenInput) {
+      hiddenInput.value = commanderScryfallId
+    }
+
+    if (this.hasSelectedDisplayTarget) {
+      this.selectedDisplayTarget.textContent = `Selected: ${commanderName}`
+      this.selectedDisplayTarget.classList.remove("text-slate-500")
+      this.selectedDisplayTarget.classList.add("text-blue-400")
     }
   }
 

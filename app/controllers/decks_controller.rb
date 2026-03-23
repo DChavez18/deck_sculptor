@@ -11,6 +11,13 @@ class DecksController < ApplicationController
 
   def create
     @deck = Deck.new(deck_params)
+
+    scryfall_id = params.dig(:deck, :commander_scryfall_id)
+    if scryfall_id.present? && @deck.commander_id.blank?
+      card_data = ScryfallService.new.find_card_by_id(scryfall_id)
+      @deck.commander = Commander.find_or_create_from_scryfall(card_data) if card_data
+    end
+
     if @deck.save
       redirect_to @deck, notice: "Deck created successfully."
     else
@@ -41,6 +48,6 @@ class DecksController < ApplicationController
   end
 
   def deck_params
-    params.require(:deck).permit(:name, :commander_id, :description, :archetype, :power_level)
+    params.require(:deck).permit(:name, :commander_id, :description, :archetype, :bracket_level)
   end
 end
