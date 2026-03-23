@@ -1,4 +1,5 @@
 require "rails_helper"
+require "uri"
 
 RSpec.describe ScryfallService, type: :service do
   subject(:service) { described_class.new }
@@ -120,6 +121,51 @@ RSpec.describe ScryfallService, type: :service do
 
       it "returns nil" do
         expect(service.find_commander("Atraxa")).to be_nil
+      end
+    end
+  end
+
+  # ── find_card_by_name ────────────────────────────────────────────────────────
+
+  describe "#find_card_by_name" do
+    let(:card_name) { "Atraxa, Praetors' Voice" }
+    let(:url) { "#{base_url}/cards/named?fuzzy=#{URI.encode_www_form_component(card_name)}" }
+
+    context "when there is a cache hit" do
+      before do
+        CardCache.store(card_hash["id"], card_hash["name"], card_hash)
+      end
+
+      it "returns the cached data without hitting the API" do
+        result = service.find_card_by_name(card_name)
+        expect(result).to eq(card_hash)
+        expect(a_request(:get, url)).not_to have_been_made
+      end
+    end
+
+    context "when there is a cache miss and the API succeeds" do
+      before do
+        stub_request(:get, url).to_return(status: 200, body: card_hash.to_json)
+      end
+
+      it "returns the card hash" do
+        result = service.find_card_by_name(card_name)
+        expect(result["name"]).to eq("Atraxa, Praetors' Voice")
+      end
+
+      it "stores the result in CardCache" do
+        expect { service.find_card_by_name(card_name) }
+          .to change(CardCache, :count).by(1)
+      end
+    end
+
+    context "when the API returns 404" do
+      before do
+        stub_request(:get, url).to_return(status: 404, body: not_found_response)
+      end
+
+      it "returns nil" do
+        expect(service.find_card_by_name(card_name)).to be_nil
       end
     end
   end

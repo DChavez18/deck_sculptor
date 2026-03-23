@@ -27,6 +27,18 @@ class ScryfallService
     parse_list_response(response)
   end
 
+  def find_card_by_name(name)
+    cached = CardCache.fetch_by_name(name)
+    return cached if cached
+
+    response = get_request("/cards/named", fuzzy: name)
+    return nil unless success?(response)
+
+    card = parse_body(response)
+    CardCache.store(card["id"], card["name"], card)
+    card
+  end
+
   def find_card_by_id(scryfall_id)
     cached = CardCache.fetch(scryfall_id)
     return cached if cached

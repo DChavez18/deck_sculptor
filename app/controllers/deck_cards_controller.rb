@@ -3,19 +3,26 @@ class DeckCardsController < ApplicationController
 
   def create
     scryfall_id = deck_card_params[:scryfall_id]
+    card_name   = deck_card_params[:card_name]
+    service     = ScryfallService.new
 
-    if scryfall_id.blank?
-      render json: { error: "scryfall_id is required" }, status: :unprocessable_entity
+    card_data = if scryfall_id.present?
+      service.find_card_by_id(scryfall_id)
+    elsif card_name.present?
+      service.find_card_by_name(card_name)
+    end
+
+    if card_data.nil?
+      redirect_to @deck, alert: "Card not found: \"#{card_name.presence || scryfall_id}\""
       return
     end
 
-    card_data = ScryfallService.new.find_card_by_id(scryfall_id)
-    category  = CardCategorizer.new(card_data || {}).category
-
-    @deck_card = @deck.deck_cards.build(deck_card_params.merge(category: category))
-
-    if card_data
-      @deck_card.assign_attributes(
+    category   = CardCategorizer.new(card_data).category
+    @deck_card = @deck.deck_cards.build(
+      deck_card_params.merge(
+        scryfall_id:    card_data["id"],
+        card_name:      card_data["name"],
+        category:       category,
         type_line:      card_data["type_line"],
         mana_cost:      card_data["mana_cost"],
         cmc:            card_data["cmc"],
@@ -24,12 +31,12 @@ class DeckCardsController < ApplicationController
         image_uri:      card_data.dig("image_uris", "normal"),
         raw_data:       card_data
       )
-    end
+    )
 
     if @deck_card.save
       redirect_to @deck, notice: "#{@deck_card.card_name} added to deck."
     else
-      render json: { errors: @deck_card.errors.full_messages }, status: :unprocessable_entity
+      redirect_to @deck, alert: @deck_card.errors.full_messages.to_sentence
     end
   end
 
