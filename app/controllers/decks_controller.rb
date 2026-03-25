@@ -39,6 +39,7 @@ class DecksController < ApplicationController
     @cards_by_category = @deck.cards_by_category
     deck_card_names    = [ @deck.commander.name ] + @deck.deck_cards.pluck(:card_name)
     @combos            = ComboFinderService.new.find_combos(deck_card_names)
+    @strategy          = StrategyAnalyzer.new(@deck).report
   end
 
   private

@@ -55,38 +55,8 @@
       </div>
     </div>
 
-    <%# Card count progress bar %>
-    <div class="bg-slate-800 border border-slate-700 rounded-xl px-5 py-4">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-white font-semibold text-sm">Deck Progress</span>
-        <span class="text-slate-400 text-sm"><%= @deck.card_count %> / 99 cards</span>
-      </div>
-      <div class="bg-slate-700 rounded-full h-3 overflow-hidden">
-        <div class="<%= @deck.complete? ? "bg-green-500" : "bg-blue-500" %> h-3 rounded-full transition-all"
-             style="width: <%= [ (@deck.card_count.to_f / 99 * 100).round, 100 ].min %>%"></div>
-      </div>
-      <% if @deck.complete? %>
-        <p class="text-green-400 text-xs mt-1">Deck complete!</p>
-      <% else %>
-        <p class="text-slate-500 text-xs mt-1"><%= 99 - @deck.card_count %> cards remaining</p>
-      <% end %>
-    </div>
-
-    <%# Quick stats %>
-    <div class="bg-slate-800 border border-slate-700 rounded-xl px-5 py-4 grid grid-cols-3 gap-4 text-center">
-      <div>
-        <div class="text-2xl font-bold text-white"><%= @deck.land_count %></div>
-        <div class="text-slate-400 text-xs mt-0.5">Lands</div>
-      </div>
-      <div>
-        <div class="text-2xl font-bold text-white"><%= @deck.avg_cmc %></div>
-        <div class="text-slate-400 text-xs mt-0.5">Avg CMC</div>
-      </div>
-      <div>
-        <% top_category = @cards_by_category.max_by { |_, cards| cards.sum(&:quantity) }&.first %>
-        <div class="text-xl font-bold text-white capitalize"><%= top_category || "—" %></div>
-        <div class="text-slate-400 text-xs mt-0.5">Top Category</div>
-      </div>
+    <div id="deck_stats">
+      <%= render "deck_stats", deck: @deck %>
     </div>
 
     <%# Add card form with live search %>
@@ -114,53 +84,17 @@
          class="hidden text-red-400 text-sm mb-3">Please select a card from the search results.</p>
 
       <%# Hidden form — submits scryfall_id + card_name %>
-      <%= form_with url: deck_deck_cards_path(@deck), method: :post, class: "flex justify-end",
+      <%= form_with url: deck_deck_cards_path(@deck), method: :post,
           data: { action: "submit->card-search#validateAndSubmit" } do |f| %>
         <input type="hidden" name="deck_card[scryfall_id]" data-card-search-target="scryfallId">
         <input type="hidden" name="deck_card[card_name]"   data-card-search-target="cardName">
-        <%= f.submit "Add Card", class: "bg-blue-600 hover:bg-blue-500 text-white text-sm px-5 py-2 rounded-md font-medium cursor-pointer" %>
+        <%= f.submit "Add Card", class: "hidden" %>
       <% end %>
     </div>
 
     <%# Cards by category %>
-    <% if @cards_by_category.empty? %>
-      <div class="text-center py-16 border border-dashed border-slate-600 rounded-xl">
-        <p class="text-slate-400">No cards added yet.</p>
-        <p class="text-slate-500 text-sm mt-1">Use the form above to add cards to your deck.</p>
-      </div>
-    <% else %>
-      <% @cards_by_category.each do |category, cards| %>
-        <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
-          <div class="px-5 py-3 bg-slate-750 border-b border-slate-700 flex items-center justify-between">
-            <h3 class="text-white font-semibold capitalize"><%= category %></h3>
-            <span class="text-slate-400 text-sm"><%= cards.sum(&:quantity) %></span>
-          </div>
-          <div class="divide-y divide-slate-700">
-            <% cards.each do |card| %>
-              <div class="px-4 py-2 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <% if card.image_uri.present? %>
-                    <img src="<%= card.image_uri&.gsub('/normal/', '/small/') %>" alt="<%= card.card_name %>"
-                         class="w-8 h-11 rounded object-cover shrink-0 border border-slate-600">
-                  <% else %>
-                    <div class="w-8 h-11 rounded bg-slate-700 border border-slate-600 shrink-0"></div>
-                  <% end %>
-                  <span class="text-slate-400 text-sm w-4 text-right shrink-0"><%= card.quantity %>×</span>
-                  <span class="text-white text-sm"><%= card.card_name %></span>
-                  <% if card.mana_cost.present? %>
-                    <span class="text-slate-500 text-xs font-mono"><%= card.mana_cost %></span>
-                  <% end %>
-                </div>
-                <%= button_to deck_deck_card_path(@deck, card), method: :delete,
-                    class: "text-slate-600 hover:text-red-400 text-xs transition-colors",
-                    form: { data: { turbo_confirm: "Remove #{card.card_name}?" } } do %>
-                  ✕
-                <% end %>
-              </div>
-            <% end %>
-          </div>
-        </div>
-      <% end %>
-    <% end %>
+    <div id="deck_card_list">
+      <%= render "deck_card_list", deck: @deck, cards_by_category: @cards_by_category %>
+    </div>
   </div>
 </div>

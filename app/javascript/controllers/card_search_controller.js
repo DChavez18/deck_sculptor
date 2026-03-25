@@ -36,6 +36,8 @@ export default class extends Controller {
     this.selectedDisplayTarget.classList.remove("hidden")
 
     this.errorTarget.classList.add("hidden")
+
+    this.element.querySelector("form").requestSubmit()
   }
 
   validateAndSubmit(event) {

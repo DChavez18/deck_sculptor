@@ -1,0 +1,33 @@
+<%# Progress bar %>
+<div class="bg-slate-800 border border-slate-700 rounded-xl px-5 py-4">
+  <div class="flex items-center justify-between mb-2">
+    <span class="text-white font-semibold text-sm">Deck Progress</span>
+    <span class="text-slate-400 text-sm"><%= deck.card_count %> / 99 cards</span>
+  </div>
+  <div class="bg-slate-700 rounded-full h-3 overflow-hidden">
+    <div class="<%= deck.complete? ? "bg-green-500" : "bg-blue-500" %> h-3 rounded-full transition-all"
+         style="width: <%= [ (deck.card_count.to_f / 99 * 100).round, 100 ].min %>%"></div>
+  </div>
+  <% if deck.complete? %>
+    <p class="text-green-400 text-xs mt-1">Deck complete!</p>
+  <% else %>
+    <p class="text-slate-500 text-xs mt-1"><%= 99 - deck.card_count %> cards remaining</p>
+  <% end %>
+</div>
+
+<%# Quick stats %>
+<div class="bg-slate-800 border border-slate-700 rounded-xl px-5 py-4 grid grid-cols-3 gap-4 text-center">
+  <div>
+    <div class="text-2xl font-bold text-white"><%= deck.land_count %></div>
+    <div class="text-slate-400 text-xs mt-0.5">Lands</div>
+  </div>
+  <div>
+    <div class="text-2xl font-bold text-white"><%= deck.avg_cmc %></div>
+    <div class="text-slate-400 text-xs mt-0.5">Avg CMC</div>
+  </div>
+  <div>
+    <% top_category = deck.cards_by_category.max_by { |_, cards| cards.sum(&:quantity) }&.first %>
+    <div class="text-xl font-bold text-white capitalize"><%= top_category || "—" %></div>
+    <div class="text-slate-400 text-xs mt-0.5">Top Category</div>
+  </div>
+</div>

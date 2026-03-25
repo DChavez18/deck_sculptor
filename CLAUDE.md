@@ -33,10 +33,12 @@ Named after Jace, the Mind Sculptor.
 - Phase 2 complete and merged — ScryfallService, WebMock, CardCache
 - Phase 3 complete and merged — UI, controllers, views, CardCategorizer, Stimulus
 - Phase 4 complete and merged — SuggestionEngine, EdhrecService, ComboFinderService, README
-- Phase 4 hotfix (branch: phase-4-hotfix) complete and merged — commander selection, bracket level
-- Phase 4 hotfix-2 complete — Add Card live search, card images in deck list
-- 156 examples, 0 failures
-- Currently on branch: `phase-4-hotfix-2` — ready to PR into main
+- Phase 4 hotfix complete and merged — commander selection, bracket level 1–5
+- Phase 4 hotfix-2 complete and merged — live card search, card images in deck list
+- Phase 5 complete — strategy analysis, archetype detection, color gap analysis
+- 184 examples, 0 failures
+- CI green
+- Currently on branch: `phase-5-strategy` — ready to PR into main
 
 ## What was built in Phase 2
 - app/services/scryfall_service.rb — search_commander, find_commander,
@@ -78,6 +80,21 @@ Named after Jace, the Mind Sculptor.
 - card_search_controller.js — debounced search, populates hidden inputs on select,
   validates before submit, hides dropdown on outside click
 
+## What was built in Phase 5
+- ArchetypeDetector — keyword scoring across oracle_text to detect
+  combo/aggro/control/stax/midrange/goodstuff
+- ColorGapAnalyzer — identifies missing colors, off-color cards, color distribution
+- StrategyAnalyzer — orchestrates both, returns detected_archetype, color_gaps,
+  strategy_summary, key_themes
+- SuggestionEngine updated — archetype_boost weights suggestions toward detected
+  archetype's card types
+- analysis view — strategy panel with archetype badge, key themes, summary,
+  color gap warnings
+- Card quantity adjustment — +/− controls, basic land detection, PATCH endpoint
+- Turbo Stream quantity updates — in-place update of stats and card list, no scroll jump
+- Auto-submit card search — selecting from dropdown immediately adds card to deck
+- Collapsible category sections — chevron toggle, space-y-4 gap between groups
+
 ## Models overview
 - Commander — Scryfall card data for the chosen commander
 - Deck — belongs to commander, holds 99 DeckCards
@@ -85,10 +102,9 @@ Named after Jace, the Mind Sculptor.
 - CardCache — local Scryfall response cache, 7-day TTL
 
 ## Upcoming phases
-- Phase 5: Strategy analysis — archetype detection, color gap analysis
 - Phase 6: Commander profile — full EDHREC integration, combo synergy
 - Phase 7: Deployment to Railway
 
 ## Current task
-Phase 4 hotfix-2 is complete. Commit and push phase-4-hotfix-2, PR into main,
-then create branch phase-5-strategy and begin Phase 5.
+Phase 5 complete — commit CLAUDE.md, push phase-5-strategy, PR into main,
+then create branch phase-6-commander-profile and begin Phase 6.

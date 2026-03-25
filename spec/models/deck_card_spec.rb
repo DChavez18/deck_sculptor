@@ -28,6 +28,20 @@ RSpec.describe DeckCard, type: :model do
     end
   end
 
+  describe "#basic_land?" do
+    it "returns true for the six basic land names" do
+      %w[Plains Island Swamp Mountain Forest Wastes].each do |name|
+        card = build(:deck_card, card_name: name)
+        expect(card.basic_land?).to be(true)
+      end
+    end
+
+    it "returns false for non-basic cards" do
+      card = build(:deck_card, card_name: "Counterspell")
+      expect(card.basic_land?).to be false
+    end
+  end
+
   describe "#color_identity_array" do
     it "splits a comma-separated string" do
       card = build(:deck_card, color_identity: "U,B")

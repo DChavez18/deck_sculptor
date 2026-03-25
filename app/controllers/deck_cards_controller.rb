@@ -40,6 +40,29 @@ class DeckCardsController < ApplicationController
     end
   end
 
+  def update
+    @deck_card = @deck.deck_cards.find(params[:id])
+    new_quantity = params.dig(:deck_card, :quantity).to_i
+
+    if new_quantity < 1
+      @deck_card.destroy
+      redirect_to @deck, notice: "#{@deck_card.card_name} removed from deck."
+      return
+    end
+
+    if new_quantity > 1 && !@deck_card.basic_land?
+      redirect_to @deck, alert: "Non-basic cards are limited to 1 copy in Commander."
+      return
+    end
+
+    @deck_card.update!(quantity: new_quantity)
+
+    respond_to do |format|
+      format.turbo_stream
+      format.html { redirect_to @deck }
+    end
+  end
+
   def destroy
     @deck_card = @deck.deck_cards.find(params[:id])
     @deck_card.destroy

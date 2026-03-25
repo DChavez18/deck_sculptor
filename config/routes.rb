@@ -4,7 +4,7 @@ Rails.application.routes.draw do
   root "decks#index"
 
   resources :decks do
-    resources :deck_cards, only: [ :create, :destroy ]
+    resources :deck_cards, only: [ :create, :update, :destroy ]
     member do
       get :suggestions
       get :analysis

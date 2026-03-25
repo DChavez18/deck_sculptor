@@ -3,6 +3,12 @@ require "set"
 class SuggestionEngine
   CREATURE_THRESHOLD = 10
 
+  ARCHETYPE_BOOSTS = {
+    "combo"   => { categories: %w[instant sorcery combo], keywords: %w[tutor storm copy] },
+    "aggro"   => { categories: %w[creature],              keywords: %w[haste token] },
+    "control" => { categories: %w[instant removal],       keywords: %w[counter exile destroy] }
+  }.freeze
+
   def initialize(deck)
     @deck = deck
   end
@@ -25,6 +31,10 @@ class SuggestionEngine
   end
 
   private
+
+  def detected_archetype
+    @detected_archetype ||= ArchetypeDetector.new(@deck).detect
+  end
 
   def score_card(card, commander_card)
     score   = 0
@@ -52,6 +62,12 @@ class SuggestionEngine
       reasons << "Fills underrepresented category"
     end
 
+    archetype_boost = archetype_boost(card)
+    if archetype_boost > 0
+      score   += archetype_boost
+      reasons << "Fits #{detected_archetype} strategy"
+    end
+
     { card: card, score: score, reasons: reasons }
   end
 
@@ -73,5 +89,19 @@ class SuggestionEngine
     return false unless creature_count < CREATURE_THRESHOLD
 
     card["type_line"].to_s.include?("Creature")
+  end
+
+  def archetype_boost(card)
+    boost = ARCHETYPE_BOOSTS[detected_archetype]
+    return 0 unless boost
+
+    card_type     = card["type_line"].to_s.downcase
+    card_oracle   = card["oracle_text"].to_s.downcase
+    card_category = CardCategorizer.new(card).category.to_s
+
+    category_match = boost[:categories].any? { |cat| card_category == cat }
+    keyword_match  = boost[:keywords].any?   { |kw|  card_oracle.include?(kw) }
+
+    (category_match || keyword_match) ? 2 : 0
   end
 end

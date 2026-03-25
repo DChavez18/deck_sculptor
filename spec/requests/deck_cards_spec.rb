@@ -96,6 +96,70 @@ RSpec.describe "DeckCards", type: :request do
     end
   end
 
+  describe "PATCH /decks/:deck_id/deck_cards/:id" do
+    context "increasing quantity on a basic land" do
+      let!(:deck_card) { create(:deck_card, :land, deck: deck, card_name: "Forest", quantity: 3) }
+
+      it "increases the quantity and redirects to deck" do
+        patch deck_deck_card_path(deck, deck_card), params: { deck_card: { quantity: 4 } }
+        expect(deck_card.reload.quantity).to eq(4)
+        expect(response).to redirect_to(deck_path(deck))
+      end
+
+      it "responds with turbo stream when requested" do
+        patch deck_deck_card_path(deck, deck_card),
+          params: { deck_card: { quantity: 4 } },
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+        expect(deck_card.reload.quantity).to eq(4)
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        expect(response.body).to include("deck_stats")
+        expect(response.body).to include("deck_card_list")
+      end
+    end
+
+    context "decreasing quantity on a basic land" do
+      let!(:deck_card) { create(:deck_card, :land, deck: deck, card_name: "Forest", quantity: 3) }
+
+      it "decreases the quantity and redirects to deck" do
+        patch deck_deck_card_path(deck, deck_card), params: { deck_card: { quantity: 2 } }
+        expect(deck_card.reload.quantity).to eq(2)
+        expect(response).to redirect_to(deck_path(deck))
+      end
+
+      it "responds with turbo stream when requested" do
+        patch deck_deck_card_path(deck, deck_card),
+          params: { deck_card: { quantity: 2 } },
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+        expect(deck_card.reload.quantity).to eq(2)
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        expect(response.body).to include("deck_stats")
+        expect(response.body).to include("deck_card_list")
+      end
+    end
+
+    context "quantity reaches 0" do
+      let!(:deck_card) { create(:deck_card, deck: deck, quantity: 1) }
+
+      it "destroys the deck card and redirects to deck" do
+        expect { patch deck_deck_card_path(deck, deck_card), params: { deck_card: { quantity: 0 } } }
+          .to change(DeckCard, :count).by(-1)
+        expect(response).to redirect_to(deck_path(deck))
+      end
+    end
+
+    context "enforcing 1-copy limit for non-basic cards" do
+      let!(:deck_card) { create(:deck_card, deck: deck, card_name: "Counterspell", quantity: 1) }
+
+      it "rejects quantity > 1 and redirects with alert" do
+        patch deck_deck_card_path(deck, deck_card), params: { deck_card: { quantity: 2 } }
+        expect(deck_card.reload.quantity).to eq(1)
+        expect(response).to redirect_to(deck_path(deck))
+        follow_redirect!
+        expect(response.body).to include("Non-basic cards are limited to 1 copy")
+      end
+    end
+  end
+
   describe "DELETE /decks/:deck_id/deck_cards/:id" do
     let!(:deck_card) { create(:deck_card, deck: deck) }
 

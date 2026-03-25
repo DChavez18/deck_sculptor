@@ -1,0 +1,7 @@
+<%= turbo_stream.update "deck_stats" do %>
+  <%= render "decks/deck_stats", deck: @deck %>
+<% end %>
+
+<%= turbo_stream.update "deck_card_list" do %>
+  <%= render "decks/deck_card_list", deck: @deck, cards_by_category: @deck.cards_by_category %>
+<% end %>
