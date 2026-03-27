@@ -6,8 +6,10 @@ Rails.application.routes.draw do
   resources :decks do
     resources :deck_cards, only: [ :create, :update, :destroy ]
     member do
-      get :suggestions
-      get :analysis
+      get  :suggestions
+      get  :analysis
+      get  :intent
+      post :save_intent
     end
   end
 

@@ -10,6 +10,7 @@ RSpec.describe "Commanders", type: :request do
     allow(EdhrecService).to receive(:new).and_return(edhrec_service)
     allow(ComboFinderService).to receive(:new).and_return(combo_service)
     allow(edhrec_service).to receive(:top_cards_with_details).and_return([])
+    allow(edhrec_service).to receive(:commander_themes).and_return([])
     allow(edhrec_service).to receive(:name_to_slug).and_return("test-commander")
     allow(combo_service).to receive(:find_combos).and_return([])
   end

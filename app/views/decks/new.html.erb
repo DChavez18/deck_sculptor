@@ -43,8 +43,6 @@
         <% end %>
       </div>
 
-      <input type="hidden" name="deck[commander_scryfall_id]" id="deck_commander_scryfall_id"
-             value="<%= @preselected_commander&.scryfall_id %>">
     </div>
   </div>
 
@@ -53,6 +51,8 @@
     <h2 class="text-lg font-semibold text-slate-300 mb-4">Deck Details</h2>
 
     <%= form_with model: @deck, class: "space-y-4" do |f| %>
+      <input type="hidden" name="deck[commander_scryfall_id]" id="deck_commander_scryfall_id"
+             value="<%= @preselected_commander&.scryfall_id %>">
       <% if @deck.errors.any? %>
         <div class="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-md text-sm">
           <ul class="list-disc list-inside space-y-1">

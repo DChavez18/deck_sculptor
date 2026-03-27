@@ -4,10 +4,12 @@ class Deck < ApplicationRecord
 
   ARCHETYPES     = %w[aggro combo control stax midrange goodstuff].freeze
   BRACKET_LEVELS = (1..5).to_a.freeze
+  BUDGETS        = %w[casual optimized competitive].freeze
 
   validates :name, presence: true
   validates :archetype,      inclusion: { in: ARCHETYPES },     allow_nil: true
   validates :bracket_level,  inclusion: { in: BRACKET_LEVELS }, allow_nil: true
+  validates :budget,         inclusion: { in: BUDGETS },        allow_nil: true
 
   def card_count
     deck_cards.sum(:quantity)

@@ -15,22 +15,31 @@ class SuggestionEngine
 
   def suggestions
     commander_card = @deck.commander.raw_data.presence || {}
-    service = ScryfallService.new
-    colors  = commander_card["color_identity"] || []
+    service        = ScryfallService.new
+    colors         = commander_card["color_identity"] || []
 
-    raw_cards    = service.commander_suggestions(commander_card)
+    raw_cards     = service.commander_suggestions(commander_card)
     broader_cards = service.cards_by_color_identity(colors)
+    edhrec_cards  = fetch_edhrec_cards(service)
 
-    all_cards  = (raw_cards + broader_cards).uniq { |c| c["id"] }
+    all_cards  = (raw_cards + broader_cards + edhrec_cards).uniq { |c| c["name"] }
     deck_ids   = @deck.deck_cards.pluck(:scryfall_id).to_set
+    deck_names = @deck.deck_cards.pluck(:card_name).map { |n| n.to_s.downcase }.to_set
 
     all_cards
-      .reject { |c| deck_ids.include?(c["id"]) }
+      .reject { |c| deck_ids.include?(c["id"]) || deck_names.include?(c["name"].to_s.downcase) }
       .map    { |c| score_card(c, commander_card) }
       .sort_by { |s| -s[:score] }
   end
 
   private
+
+  def fetch_edhrec_cards(service)
+    top = EdhrecService.new.top_cards_with_details(@deck.commander.name)
+    @edhrec_card_names    = Set.new(top.map { |c| c[:name] })
+    @edhrec_synergy_scores = top.each_with_object({}) { |c, h| h[c[:name]] = c[:synergy] }
+    top.filter_map { |c| service.find_card_by_name(c[:name]) }
+  end
 
   def detected_archetype
     @detected_archetype ||= ArchetypeDetector.new(@deck).detect
@@ -73,7 +82,34 @@ class SuggestionEngine
       reasons << "Combo piece"
     end
 
+    edhrec_score, edhrec_reason = edhrec_boost(card)
+    if edhrec_score > 0
+      score   += edhrec_score
+      reasons << edhrec_reason
+    end
+
+    theme_result = theme_boost(card)
+    if theme_result[:score] > 0
+      score   += theme_result[:score]
+      reasons.concat(theme_result[:reasons])
+    end
+
     { card: card, score: score, reasons: reasons }
+  end
+
+  def edhrec_boost(card)
+    synergy = @edhrec_synergy_scores&.fetch(card["name"], nil)
+    return [ 0, nil ] unless synergy
+
+    if synergy >= 0.3
+      [ 3, "High synergy staple" ]
+    elsif synergy >= 0.1
+      [ 2, "Commander staple" ]
+    elsif synergy > 0
+      [ 1, "Popular pick" ]
+    else
+      [ 0, nil ]
+    end
   end
 
   def within_color_identity?(card, commander_card)
@@ -114,11 +150,23 @@ class SuggestionEngine
     @deck_combos ||= ComboFinderService.new.find_combos([ @deck.commander.name ])
   end
 
+  def theme_boost(card)
+    return { score: 0, reasons: [] } if @deck.themes.blank?
+
+    keywords = @deck.themes.split(",").map(&:strip).reject(&:blank?)
+    return { score: 0, reasons: [] } if keywords.empty?
+
+    card_text = "#{card['oracle_text']} #{card['type_line']}".downcase
+    matched   = keywords.select { |kw| card_text.include?(kw.downcase) }.first(2)
+    return { score: 0, reasons: [] } if matched.empty?
+
+    { score: matched.size * 2, reasons: matched.map { |kw| "Matches your theme: #{kw}" } }
+  end
+
   def archetype_boost(card)
     boost = ARCHETYPE_BOOSTS[detected_archetype]
     return 0 unless boost
 
-    card_type     = card["type_line"].to_s.downcase
     card_oracle   = card["oracle_text"].to_s.downcase
     card_category = CardCategorizer.new(card).category.to_s
 

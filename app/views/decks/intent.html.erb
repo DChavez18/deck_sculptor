@@ -1,0 +1,82 @@
+<div class="max-w-2xl mx-auto">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-white">Personalize Your Deck</h1>
+    <p class="text-slate-400 mt-2">Tell us about your strategy so we can give you better suggestions.</p>
+  </div>
+
+  <%= form_with url: save_intent_deck_path(@deck), method: :post, class: "space-y-8" do |f| %>
+
+    <%# Question 1 — Win Condition %>
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+      <h2 class="text-white font-semibold text-lg mb-4">How do you plan to win?</h2>
+      <div class="space-y-3">
+        <% [
+          "Combat damage",
+          "Infinite combo",
+          "Mill opponents",
+          "Poison / Infect",
+          "Card advantage engine",
+          "Other"
+        ].each do |option| %>
+          <label class="flex items-center gap-3 cursor-pointer group">
+            <input type="radio" name="deck[win_condition]" value="<%= option %>"
+                   <%= "checked" if @deck.win_condition == option %>
+                   class="w-4 h-4 text-blue-500 bg-slate-700 border-slate-500 focus:ring-blue-500">
+            <span class="text-slate-300 group-hover:text-white transition-colors"><%= option %></span>
+          </label>
+        <% end %>
+      </div>
+    </div>
+
+    <%# Question 2 — Budget %>
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+      <h2 class="text-white font-semibold text-lg mb-4">What is your budget?</h2>
+      <div class="space-y-3">
+        <% [
+          ["casual",      "Casual (under $50)"],
+          ["optimized",   "Optimized ($50–$200)"],
+          ["competitive", "Competitive ($200+)"]
+        ].each do |value, label| %>
+          <label class="flex items-center gap-3 cursor-pointer group">
+            <input type="radio" name="deck[budget]" value="<%= value %>"
+                   <%= "checked" if @deck.budget == value %>
+                   class="w-4 h-4 text-blue-500 bg-slate-700 border-slate-500 focus:ring-blue-500">
+            <span class="text-slate-300 group-hover:text-white transition-colors"><%= label %></span>
+          </label>
+        <% end %>
+      </div>
+    </div>
+
+    <%# Question 3 — Playstyle %>
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+      <h2 class="text-white font-semibold text-lg mb-4">What is your playstyle?</h2>
+      <div class="space-y-3">
+        <% Deck::ARCHETYPES.each do |archetype| %>
+          <label class="flex items-center gap-3 cursor-pointer group">
+            <input type="radio" name="deck[archetype]" value="<%= archetype %>"
+                   <%= "checked" if @deck.archetype == archetype %>
+                   class="w-4 h-4 text-blue-500 bg-slate-700 border-slate-500 focus:ring-blue-500">
+            <span class="text-slate-300 group-hover:text-white transition-colors capitalize"><%= archetype %></span>
+          </label>
+        <% end %>
+      </div>
+    </div>
+
+    <%# Question 4 — Themes %>
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+      <h2 class="text-white font-semibold text-lg mb-2">What themes or mechanics does your deck use?</h2>
+      <p class="text-slate-500 text-sm mb-4">Separate multiple themes with commas.</p>
+      <input type="text" name="deck[themes]" value="<%= @deck.themes %>"
+             placeholder="e.g. tokens, spellslinger, graveyard recursion"
+             class="w-full bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md px-4 py-3 focus:outline-none focus:border-blue-500">
+    </div>
+
+    <div class="flex items-center gap-4">
+      <%= f.submit "Save and Get Suggestions",
+          class: "bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-3 rounded-md cursor-pointer transition-colors" %>
+      <%= link_to "Skip for now", deck_path(@deck),
+          class: "text-slate-400 hover:text-white text-sm underline underline-offset-2" %>
+    </div>
+
+  <% end %>
+</div>

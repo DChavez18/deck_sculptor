@@ -1,5 +1,9 @@
+require "set"
+
 class EdhrecService
   BASE_URL = "https://json.edhrec.com/pages/commanders"
+
+  PRIORITY_TAGS = %w[highsynergycards topcards gamechangers].freeze
 
   def commander_data(commander_name)
     slug      = name_to_slug(commander_name)
@@ -20,11 +24,7 @@ class EdhrecService
   end
 
   def top_cards(commander_name)
-    data = commander_data(commander_name)
-    return [] unless data.is_a?(Hash)
-
-    card_list = data["cardlist"] || []
-    card_list.first(20).filter_map { |c| c["name"] }
+    top_cards_with_details(commander_name).map { |c| c[:name] }
   rescue StandardError
     []
   end
@@ -33,15 +33,52 @@ class EdhrecService
     data = commander_data(commander_name)
     return [] unless data.is_a?(Hash)
 
-    card_list = data["cardlist"] || []
-    card_list.first(10).filter_map do |c|
-      next unless c["name"].present?
-      {
-        name:     c["name"],
-        category: infer_category(c["type"].to_s),
-        reason:   "Popular with #{commander_name}"
-      }
+    cardlists = data.dig("container", "json_dict", "cardlists")
+    return [] unless cardlists.is_a?(Array)
+
+    seen   = Set.new
+    merged = []
+
+    PRIORITY_TAGS.each do |tag|
+      list = cardlists.find { |l| l["tag"] == tag }
+      next unless list
+
+      (list["cardviews"] || []).each do |card|
+        name = card["name"]
+        next unless name.present? && !seen.include?(name)
+
+        seen << name
+        merged << card
+      end
     end
+
+    merged
+      .sort_by { |c| -(c["synergy"].to_f) }
+      .first(20)
+      .map do |c|
+        {
+          name:      c["name"],
+          synergy:   c["synergy"].to_f,
+          inclusion: c["inclusion"].to_i,
+          category:  infer_category(c["type"].to_s),
+          reason:    "Popular with #{commander_name}"
+        }
+      end
+  rescue StandardError
+    []
+  end
+
+  def commander_themes(commander_name)
+    data = commander_data(commander_name)
+    return [] unless data.is_a?(Hash)
+
+    panels = data["panels"]
+    return [] unless panels.is_a?(Hash)
+
+    tags = panels["tags"] || panels["Tags"]
+    return [] unless tags.is_a?(Array)
+
+    tags.filter_map { |t| t["label"] || t["name"] }
   rescue StandardError
     []
   end

@@ -36,11 +36,11 @@ Named after Jace, the Mind Sculptor.
 - Phase 4 hotfix complete and merged — commander selection, bracket level 1–5
 - Phase 4 hotfix-2 complete and merged — live card search, card images in deck list
 - Phase 5 complete and merged — strategy analysis, archetype detection, color gap analysis
-- Phase 6 complete — commander profile, EDHREC integration, combo synergy boost,
-  commander preview on new deck form
-- 201 examples, 0 failures
+- Phase 6 complete and merged — commander profile, EDHREC integration, combo synergy
+- Phase 7 complete — smarter suggestions, EDHREC fix, intent questionnaire, edit/delete
+- 253 examples, 0 failures
 - CI green
-- Currently on branch: `phase-6-commander-profile` — ready to PR into main
+- Currently on branch: `phase-7-suggestions` — ready to PR into main
 
 ## What was built in Phase 2
 - app/services/scryfall_service.rb — search_commander, find_commander,
@@ -101,40 +101,41 @@ Named after Jace, the Mind Sculptor.
 - Commander profile page (/commanders/:id) — large card image, oracle text,
   color pips, EDHREC rank, link to EDHREC, top 10 popular cards, known combos
 - EdhrecService#top_cards_with_details — returns structured card list with
-  name, category, reason. Gracefully returns [] on failure
+  name, synergy, inclusion, category, reason. Gracefully returns [] on failure
 - SuggestionEngine combo synergy boost — +3 and "Combo piece" tag when a
   suggested card appears in a combo with 2+ cards already in the deck
 - Commander image and name on deck show page are clickable links to profile
 - New deck form — commander card preview shown after selecting from search
-  (image links to profile, "Change commander" resets to search)
 - New deck form — pre-populates commander when arriving from profile page
-  via ?commander_id= param
+
+## What was built in Phase 7
+- Fixed EDHREC integration — data now read from container/json_dict/cardlists,
+  merging highsynergycards, topcards, gamechangers lists
+- Tiered EDHREC synergy scoring — +3 "High synergy staple" (≥0.3), +2
+  "Commander staple" (≥0.1), +1 "Popular pick" (>0)
+- EdhrecService#commander_themes — pulls theme tags from EDHREC panels
+- Commander profile — EDHREC theme tags shown as pill badges
+- RatioAnalyzer — card type ratio targets vs actuals with cut suggestions
+- CurveAdvisor — plain English mana curve recommendations
+- Analysis page — Card Type Ratios panel and Mana Curve Recommendations
+- Deck edit/delete — pencil/trash icons on index (hover), Edit Deck button on show
+- Intent questionnaire — after deck creation, 4-question form captures win
+  condition, budget, playstyle, themes; redirects to deck show on save
+- Theme-based suggestion boost — +2 per matching theme keyword in oracle_text,
+  capped at +4, with "Matches your theme: X" reason tags
+- Fixed commander pre-selection bug — hidden input moved inside form
 
 ## Models overview
 - Commander — Scryfall card data for the chosen commander
-- Deck — belongs to commander, holds 99 DeckCards
+- Deck — belongs to commander, holds 99 DeckCards; has win_condition, budget,
+  themes, intent_completed fields
 - DeckCard — a card in a deck with category, cmc, color_identity (string)
 - CardCache — local Scryfall response cache, 7-day TTL
 
 ## Upcoming phases
-- Phase 7: Smarter suggestions + analysis deep dive
 - Phase 8: AI deck advisor chat (Claude API)
 - Phase 9: Deployment to Railway
 
-## What Phase 7 will build
-- Pull commander-specific staples from EDHREC to seed suggestion pool
-- Filter cards already in the deck from suggestions
-- Boost EDHREC top cards in suggestion scoring
-- Analysis page: card type ratio targets vs actuals
-- Analysis page: mana curve recommendations
-- Analysis page: cuts suggestions based on ratio targets
-
-## What Phase 8 will build
-- AI chat panel on suggestions page powered by Claude API
-- Full deck context passed as system prompt
-- Users can ask: why is this card good, what should I cut, how to improve
-  mana base, what's the win condition, unique cards for my theme
-
 ## Current task
-Phase 6 complete — commit CLAUDE.md, push phase-6-commander-profile,
-PR into main, then create branch phase-7-suggestions and begin Phase 7.
+Phase 7 complete — commit CLAUDE.md, push phase-7-suggestions, PR into main,
+then create branch phase-8-ai-advisor and begin Phase 8.

@@ -14,7 +14,9 @@ class CommandersController < ApplicationController
     @commander = Commander.find_by(id: params[:id])
     redirect_to root_path, alert: "Commander not found." and return unless @commander
 
-    @edhrec_top_cards = EdhrecService.new.top_cards_with_details(@commander.name)
+    edhrec            = EdhrecService.new
+    @edhrec_top_cards = edhrec.top_cards_with_details(@commander.name)
+    @edhrec_themes    = edhrec.commander_themes(@commander.name)
     @combos           = ComboFinderService.new.find_combos([ @commander.name ])
   end
 end

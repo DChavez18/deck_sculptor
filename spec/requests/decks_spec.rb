@@ -29,9 +29,9 @@ RSpec.describe "Decks", type: :request do
         }
       end
 
-      it "creates a deck and redirects to it" do
+      it "creates a deck and redirects to intent page" do
         expect { post decks_path, params: params }.to change(Deck, :count).by(1)
-        expect(response).to redirect_to(deck_path(Deck.last))
+        expect(response).to redirect_to(intent_deck_path(Deck.last))
       end
     end
 
@@ -49,6 +49,36 @@ RSpec.describe "Decks", type: :request do
     before { get deck_path(deck) }
 
     it { expect(response).to have_http_status(:ok) }
+  end
+
+  describe "GET /decks/:id/edit" do
+    before { get edit_deck_path(deck) }
+
+    it { expect(response).to have_http_status(:ok) }
+  end
+
+  describe "PATCH /decks/:id" do
+    context "with valid params" do
+      it "updates the deck and redirects to show" do
+        patch deck_path(deck), params: { deck: { name: "Updated Name" } }
+        expect(response).to redirect_to(deck_path(deck))
+        expect(deck.reload.name).to eq("Updated Name")
+      end
+    end
+
+    context "with invalid params" do
+      it "re-renders edit with unprocessable entity" do
+        patch deck_path(deck), params: { deck: { name: "" } }
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+    end
+  end
+
+  describe "DELETE /decks/:id" do
+    it "destroys the deck and redirects to index" do
+      expect { delete deck_path(deck) }.to change(Deck, :count).by(-1)
+      expect(response).to redirect_to(decks_path)
+    end
   end
 
   describe "GET /decks/:id/suggestions" do
@@ -73,5 +103,36 @@ RSpec.describe "Decks", type: :request do
     end
 
     it { expect(response).to have_http_status(:ok) }
+  end
+
+  describe "GET /decks/:id/intent" do
+    before { get intent_deck_path(deck) }
+
+    it { expect(response).to have_http_status(:ok) }
+  end
+
+  describe "POST /decks/:id/save_intent" do
+    context "with valid params" do
+      let(:params) do
+        {
+          deck: {
+            win_condition: "Infinite combo",
+            budget: "optimized",
+            archetype: "combo",
+            themes: "tokens, aristocrats"
+          }
+        }
+      end
+
+      it "saves intent and redirects to deck show" do
+        post save_intent_deck_path(deck), params: params
+        expect(response).to redirect_to(deck_path(deck))
+        deck.reload
+        expect(deck.win_condition).to eq("Infinite combo")
+        expect(deck.budget).to eq("optimized")
+        expect(deck.themes).to eq("tokens, aristocrats")
+        expect(deck.intent_completed).to be true
+      end
+    end
   end
 end

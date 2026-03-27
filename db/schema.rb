@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_23_202301) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_27_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -67,11 +67,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_23_202301) do
   create_table "decks", force: :cascade do |t|
     t.string "archetype"
     t.integer "bracket_level", default: 3
+    t.string "budget"
     t.bigint "commander_id", null: false
     t.datetime "created_at", null: false
     t.text "description"
+    t.boolean "intent_completed", default: false
     t.string "name", null: false
+    t.text "themes"
     t.datetime "updated_at", null: false
+    t.string "win_condition"
     t.index ["commander_id"], name: "index_decks_on_commander_id"
   end
 

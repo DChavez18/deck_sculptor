@@ -65,6 +65,63 @@
   <% end %>
 </div>
 
+<%# Card type ratio targets %>
+<div class="mb-6 bg-slate-800 border border-slate-700 rounded-xl p-5">
+  <h2 class="text-white font-semibold mb-4">Card Type Ratios</h2>
+  <% if @ratio_report.values.all? { |r| r[:actual] == 0 } %>
+    <p class="text-slate-400 text-sm">No cards yet.</p>
+  <% else %>
+    <div class="space-y-3">
+      <% @ratio_report.each do |bucket, data| %>
+        <% actual = data[:actual]; target = data[:target] %>
+        <% pct = [ (actual.to_f / target * 100).round, 100 ].min %>
+        <% diff = actual - target %>
+        <% bar_color = diff >= 0 ? "bg-green-500" : (diff >= -3 ? "bg-amber-500" : "bg-red-500") %>
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-slate-300 text-xs capitalize font-medium"><%= bucket %></span>
+            <span class="text-slate-400 text-xs"><%= actual %> / <%= target %>
+              <% if diff > 0 %>
+                <span class="text-green-400 ml-1">+<%= diff %></span>
+              <% elsif diff < 0 %>
+                <span class="text-red-400 ml-1"><%= diff %></span>
+              <% end %>
+            </span>
+          </div>
+          <div class="bg-slate-700 rounded-full h-3 overflow-hidden">
+            <div class="<%= bar_color %> h-3 rounded-full transition-all" style="width: <%= pct %>%"></div>
+          </div>
+          <%# Cut suggestions %>
+          <% if data[:cut_suggestions].any? %>
+            <div class="mt-1.5 text-xs text-slate-400">
+              Consider cutting:
+              <% data[:cut_suggestions].each_with_index do |cut, i| %>
+                <span class="text-slate-300"><%= cut[:name] %> (CMC <%= cut[:cmc] %>)<%= i < data[:cut_suggestions].size - 1 ? "," : "" %></span>
+              <% end %>
+              <span class="text-slate-500 ml-1">— you have <%= actual %>, target is <%= target %></span>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+<%# Mana curve advice %>
+<% if @curve_advice.any? %>
+  <div class="mb-6 bg-slate-800 border border-slate-700 rounded-xl p-5">
+    <h2 class="text-white font-semibold mb-3">Mana Curve Recommendations</h2>
+    <ul class="space-y-2">
+      <% @curve_advice.each do |rec| %>
+        <li class="flex items-start gap-2 text-sm text-slate-300">
+          <span class="text-amber-400 mt-0.5 shrink-0">•</span>
+          <%= rec %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
   <%# Mana curve %>
   <div class="bg-slate-800 border border-slate-700 rounded-xl p-5">

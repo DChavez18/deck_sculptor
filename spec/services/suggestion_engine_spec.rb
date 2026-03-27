@@ -11,6 +11,7 @@ RSpec.describe SuggestionEngine do
   subject(:engine) { described_class.new(deck) }
 
   let(:scryfall_service) { instance_double(ScryfallService) }
+  let(:edhrec_service)   { instance_double(EdhrecService) }
 
   let(:flying_creature) do
     {
@@ -57,6 +58,9 @@ RSpec.describe SuggestionEngine do
     allow(ScryfallService).to receive(:new).and_return(scryfall_service)
     allow(scryfall_service).to receive(:commander_suggestions).and_return([ flying_creature, curve_filler, off_color_card ])
     allow(scryfall_service).to receive(:cards_by_color_identity).and_return([])
+    allow(scryfall_service).to receive(:find_card_by_name).and_return(nil)
+    allow(EdhrecService).to receive(:new).and_return(edhrec_service)
+    allow(edhrec_service).to receive(:top_cards_with_details).and_return([])
     allow(ComboFinderService).to receive(:new).and_return(combo_service)
     allow(combo_service).to receive(:find_combos).and_return([])
   end
@@ -74,11 +78,18 @@ RSpec.describe SuggestionEngine do
       expect(scores).to eq(scores.sort.reverse)
     end
 
-    it "excludes cards already in the deck" do
+    it "excludes cards already in the deck by scryfall_id" do
       create(:deck_card, deck: deck, scryfall_id: "card-flying")
       results = engine.suggestions
       ids = results.map { |r| r[:card]["id"] }
       expect(ids).not_to include("card-flying")
+    end
+
+    it "excludes cards already in the deck by card name" do
+      create(:deck_card, deck: deck, scryfall_id: "other-id", card_name: "Angel of Mercy")
+      results = engine.suggestions
+      names = results.map { |r| r[:card]["name"] }
+      expect(names).not_to include("Angel of Mercy")
     end
 
     it "merges suggestions from commander_suggestions and cards_by_color_identity" do
@@ -100,6 +111,38 @@ RSpec.describe SuggestionEngine do
       allow(scryfall_service).to receive(:cards_by_color_identity).and_return([ flying_creature ])
       ids = engine.suggestions.map { |r| r[:card]["id"] }
       expect(ids.count("card-flying")).to eq(1)
+    end
+
+    context "EDHREC pool seeding" do
+      let(:edhrec_card) do
+        {
+          "id"             => "card-edhrec",
+          "name"           => "Sol Ring",
+          "type_line"      => "Artifact",
+          "cmc"            => 1.0,
+          "color_identity" => [],
+          "keywords"       => [],
+          "oracle_text"    => "{T}: Add {C}{C}."
+        }
+      end
+
+      before do
+        allow(edhrec_service).to receive(:top_cards_with_details).and_return([
+          { name: "Sol Ring", synergy: 0.15, inclusion: 90000, category: "artifact", reason: "Popular with commander" }
+        ])
+        allow(scryfall_service).to receive(:find_card_by_name).with("Sol Ring").and_return(edhrec_card)
+      end
+
+      it "includes EDHREC top cards in the suggestion pool" do
+        names = engine.suggestions.map { |r| r[:card]["name"] }
+        expect(names).to include("Sol Ring")
+      end
+
+      it "deduplicates EDHREC cards already present in other pools" do
+        allow(scryfall_service).to receive(:commander_suggestions).and_return([ edhrec_card ])
+        names = engine.suggestions.map { |r| r[:card]["name"] }
+        expect(names.count("Sol Ring")).to eq(1)
+      end
     end
   end
 
@@ -186,6 +229,137 @@ RSpec.describe SuggestionEngine do
         it "does not award +2 for creature cards" do
           result = engine.suggestions.find { |r| r[:card]["id"] == "card-flying" }
           expect(result[:reasons]).not_to include("Fills underrepresented category")
+        end
+      end
+    end
+
+    describe "tiered EDHREC synergy boost" do
+      let(:staple_card) do
+        {
+          "id"             => "card-staple",
+          "name"           => "Swords to Plowshares",
+          "type_line"      => "Instant",
+          "cmc"            => 1.0,
+          "color_identity" => [ "W" ],
+          "keywords"       => [],
+          "oracle_text"    => "Exile target creature."
+        }
+      end
+
+      before do
+        allow(scryfall_service).to receive(:commander_suggestions).and_return([ staple_card, flying_creature ])
+        allow(scryfall_service).to receive(:find_card_by_name).with("Swords to Plowshares").and_return(staple_card)
+      end
+
+      context "when synergy >= 0.3" do
+        before do
+          allow(edhrec_service).to receive(:top_cards_with_details).and_return([
+            { name: "Swords to Plowshares", synergy: 0.35, inclusion: 60000, category: "removal", reason: "Popular with commander" }
+          ])
+        end
+
+        it "awards +3 and tags 'High synergy staple'" do
+          result = engine.suggestions.find { |r| r[:card]["id"] == "card-staple" }
+          expect(result[:score]).to be >= 3
+          expect(result[:reasons]).to include("High synergy staple")
+        end
+      end
+
+      context "when synergy >= 0.1 but < 0.3" do
+        before do
+          allow(edhrec_service).to receive(:top_cards_with_details).and_return([
+            { name: "Swords to Plowshares", synergy: 0.15, inclusion: 60000, category: "removal", reason: "Popular with commander" }
+          ])
+        end
+
+        it "awards +2 and tags 'Commander staple'" do
+          result = engine.suggestions.find { |r| r[:card]["id"] == "card-staple" }
+          expect(result[:score]).to be >= 2
+          expect(result[:reasons]).to include("Commander staple")
+        end
+      end
+
+      context "when synergy > 0 but < 0.1" do
+        before do
+          allow(edhrec_service).to receive(:top_cards_with_details).and_return([
+            { name: "Swords to Plowshares", synergy: 0.05, inclusion: 60000, category: "removal", reason: "Popular with commander" }
+          ])
+        end
+
+        it "awards +1 and tags 'Popular pick'" do
+          result = engine.suggestions.find { |r| r[:card]["id"] == "card-staple" }
+          expect(result[:score]).to be >= 1
+          expect(result[:reasons]).to include("Popular pick")
+        end
+      end
+
+      context "when a card is not in the EDHREC list" do
+        before do
+          allow(edhrec_service).to receive(:top_cards_with_details).and_return([
+            { name: "Swords to Plowshares", synergy: 0.35, inclusion: 60000, category: "removal", reason: "Popular with commander" }
+          ])
+        end
+
+        it "does not award any EDHREC boost" do
+          result = engine.suggestions.find { |r| r[:card]["id"] == "card-flying" }
+          expect(result[:reasons]).not_to include("High synergy staple", "Commander staple", "Popular pick")
+        end
+      end
+    end
+
+    describe "+2/+4 theme keyword boost" do
+      let(:token_card) do
+        {
+          "id"             => "card-token",
+          "name"           => "Anointed Procession",
+          "type_line"      => "Enchantment",
+          "cmc"            => 4.0,
+          "color_identity" => [ "W" ],
+          "keywords"       => [],
+          "oracle_text"    => "If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead."
+        }
+      end
+
+      before do
+        allow(scryfall_service).to receive(:commander_suggestions).and_return([ token_card ])
+      end
+
+      context "when deck has a matching theme keyword" do
+        let(:deck) { create(:deck, commander: commander, themes: "tokens, aristocrats") }
+
+        it "awards +2 per matching keyword up to +4" do
+          result = engine.suggestions.find { |r| r[:card]["id"] == "card-token" }
+          expect(result[:score]).to be >= 2
+          expect(result[:reasons]).to include("Matches your theme: tokens")
+        end
+
+        it "caps boost at +4 for two matching themes" do
+          two_theme_card = token_card.merge(
+            "id"          => "card-two-themes",
+            "oracle_text" => "tokens aristocrats"
+          )
+          allow(scryfall_service).to receive(:commander_suggestions).and_return([ two_theme_card ])
+          result = engine.suggestions.find { |r| r[:card]["id"] == "card-two-themes" }
+          theme_score = result[:reasons].count { |r| r.start_with?("Matches your theme") } * 2
+          expect(theme_score).to be <= 4
+        end
+      end
+
+      context "when deck has no themes set" do
+        let(:deck) { create(:deck, commander: commander, themes: nil) }
+
+        it "awards no theme boost" do
+          result = engine.suggestions.find { |r| r[:card]["id"] == "card-token" }
+          expect(result[:reasons]).not_to include(a_string_matching(/Matches your theme/))
+        end
+      end
+
+      context "when card does not match any theme keyword" do
+        let(:deck) { create(:deck, commander: commander, themes: "graveyard, reanimator") }
+
+        it "awards no theme boost to an unrelated card" do
+          result = engine.suggestions.find { |r| r[:card]["id"] == "card-token" }
+          expect(result[:reasons]).not_to include(a_string_matching(/Matches your theme/))
         end
       end
     end

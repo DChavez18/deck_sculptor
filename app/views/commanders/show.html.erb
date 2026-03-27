@@ -67,6 +67,20 @@
       </a>
     </div>
 
+    <%# EDHREC theme tags %>
+    <% if @edhrec_themes.any? %>
+      <div>
+        <p class="text-slate-400 text-xs mb-2">Themes</p>
+        <div class="flex flex-wrap gap-2">
+          <% @edhrec_themes.each do |theme| %>
+            <span class="bg-slate-700 text-slate-200 text-xs px-3 py-1 rounded-full border border-slate-600">
+              <%= theme %>
+            </span>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
     <%# Build deck CTA %>
     <div>
       <%= link_to "Build a Deck with #{@commander.name}", new_deck_path(commander_id: @commander.id),
