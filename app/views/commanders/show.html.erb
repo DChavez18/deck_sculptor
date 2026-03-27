@@ -1,27 +1,140 @@
-<div class="max-w-2xl">
-  <div class="flex gap-6">
+<%# Back nav %>
+<div class="mb-6">
+  <%= link_to "← All Decks", decks_path, class: "text-slate-400 hover:text-white text-sm" %>
+</div>
+
+<%# Hero section — card image + identity %>
+<div class="flex flex-col lg:flex-row gap-8 mb-8">
+  <%# Large card image %>
+  <div class="shrink-0">
     <% if @commander.image_url.present? %>
-      <img src="<%= @commander.image_url %>" alt="<%= @commander.name %>" class="w-48 rounded-xl">
+      <img src="<%= @commander.image_url %>" alt="<%= @commander.name %>"
+           class="w-64 rounded-2xl shadow-2xl shadow-blue-900/30 border border-slate-700">
+    <% else %>
+      <div class="w-64 h-96 bg-slate-800 border border-slate-700 rounded-2xl flex items-center justify-center">
+        <span class="text-slate-500 text-6xl">🎴</span>
+      </div>
     <% end %>
+  </div>
+
+  <%# Commander details %>
+  <div class="flex-1 space-y-4">
     <div>
-      <h1 class="text-3xl font-bold text-white"><%= @commander.name %></h1>
+      <h1 class="text-4xl font-bold text-white leading-tight"><%= @commander.name %></h1>
       <p class="text-slate-400 text-sm mt-1"><%= @commander.type_line %></p>
       <p class="text-slate-500 font-mono text-sm mt-1"><%= @commander.mana_cost %></p>
+    </div>
 
-      <% unless @commander.color_names.empty? %>
-        <div class="flex flex-wrap gap-2 mt-3">
-          <% @commander.color_names.each do |color| %>
-            <span class="text-sm bg-slate-700 text-slate-300 px-3 py-1 rounded-full"><%= color %></span>
-          <% end %>
+    <%# Color identity pips %>
+    <% unless @commander.color_identity_array.empty? %>
+      <% color_pip_map = {
+           "W" => { label: "W", bg: "bg-yellow-100",  text: "text-yellow-900" },
+           "U" => { label: "U", bg: "bg-blue-500",    text: "text-white" },
+           "B" => { label: "B", bg: "bg-slate-900",   text: "text-slate-100" },
+           "R" => { label: "R", bg: "bg-red-600",     text: "text-white" },
+           "G" => { label: "G", bg: "bg-green-600",   text: "text-white" }
+         } %>
+      <div class="flex flex-wrap items-center gap-2">
+        <% @commander.color_identity_array.each do |color| %>
+          <% pip = color_pip_map[color] || { label: color, bg: "bg-slate-600", text: "text-white" } %>
+          <span class="<%= pip[:bg] %> <%= pip[:text] %> text-sm font-bold w-8 h-8 rounded-full flex items-center justify-center border border-slate-600">
+            <%= pip[:label] %>
+          </span>
+        <% end %>
+        <% @commander.color_names.each do |name| %>
+          <span class="text-slate-400 text-sm"><%= name %></span>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# Oracle text %>
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+      <p class="text-slate-300 text-sm leading-relaxed whitespace-pre-line"><%= @commander.oracle_text %></p>
+    </div>
+
+    <%# EDHREC rank + link %>
+    <div class="flex flex-wrap items-center gap-4">
+      <% if @commander.edhrec_rank.present? %>
+        <div class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2">
+          <p class="text-slate-400 text-xs">EDHREC Rank</p>
+          <p class="text-white font-bold text-lg">#<%= @commander.edhrec_rank %></p>
         </div>
       <% end %>
-
-      <p class="text-slate-300 text-sm mt-4 leading-relaxed"><%= @commander.oracle_text %></p>
-
-      <div class="mt-6">
-        <%= link_to "Build a Deck with #{@commander.name}", new_deck_path,
-            class: "bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-md font-medium text-sm" %>
-      </div>
+      <a href="https://edhrec.com/commanders/<%= EdhrecService.new.name_to_slug(@commander.name) %>"
+         target="_blank" rel="noopener noreferrer"
+         class="text-blue-400 hover:text-blue-300 text-sm font-medium border border-blue-800 hover:border-blue-600 rounded-lg px-4 py-2 transition-colors">
+        View on EDHREC →
+      </a>
     </div>
+
+    <%# Build deck CTA %>
+    <div>
+      <%= link_to "Build a Deck with #{@commander.name}", new_deck_path(commander_id: @commander.id),
+          class: "bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-md font-medium text-sm inline-block" %>
+    </div>
+  </div>
+</div>
+
+<%# Bottom panels — popular cards + combos %>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <%# Top cards from EDHREC %>
+  <div class="bg-slate-800 border border-slate-700 rounded-xl p-5">
+    <h2 class="text-white font-semibold mb-4">
+      Popular Cards
+      <span class="text-slate-500 text-xs font-normal ml-1">via EDHREC</span>
+    </h2>
+
+    <% if @edhrec_top_cards.empty? %>
+      <div class="text-center py-6 border border-dashed border-slate-600 rounded-xl">
+        <p class="text-slate-400 text-sm">No EDHREC data available for this commander.</p>
+      </div>
+    <% else %>
+      <ol class="space-y-2">
+        <% @edhrec_top_cards.each_with_index do |card, i| %>
+          <li class="flex items-center gap-3 py-2 border-b border-slate-700 last:border-0">
+            <span class="text-slate-500 text-xs w-5 text-right shrink-0"><%= i + 1 %></span>
+            <div class="flex-1 min-w-0">
+              <p class="text-white text-sm font-medium truncate"><%= card[:name] %></p>
+              <p class="text-slate-500 text-xs capitalize"><%= card[:category] %></p>
+            </div>
+            <span class="text-slate-500 text-xs shrink-0"><%= card[:reason].gsub("Popular with #{@commander.name}", "Popular") %></span>
+          </li>
+        <% end %>
+      </ol>
+    <% end %>
+  </div>
+
+  <%# Known combos %>
+  <div class="bg-slate-800 border border-slate-700 rounded-xl p-5">
+    <h2 class="text-white font-semibold mb-4">
+      Known Combos
+      <span class="text-slate-500 text-xs font-normal ml-1">via Commander Spellbook</span>
+    </h2>
+
+    <% if @combos.empty? %>
+      <div class="text-center py-6 border border-dashed border-slate-600 rounded-xl">
+        <p class="text-slate-400 text-sm">No known combos for this commander.</p>
+        <a href="https://commanderspellbook.com/search/?q=card%3A<%= ERB::Util.url_encode(@commander.name) %>"
+           target="_blank" rel="noopener noreferrer"
+           class="text-blue-400 hover:text-blue-300 text-xs mt-2 inline-block">
+          Search Commander Spellbook →
+        </a>
+      </div>
+    <% else %>
+      <div class="space-y-3 max-h-96 overflow-y-auto pr-1">
+        <% @combos.each do |combo| %>
+          <div class="border border-slate-700 rounded-lg p-3">
+            <div class="flex flex-wrap gap-1 mb-2">
+              <% combo[:cards].each do |card_name| %>
+                <span class="bg-slate-700 text-slate-200 text-xs px-2 py-0.5 rounded-full font-medium"><%= card_name %></span>
+              <% end %>
+            </div>
+            <% if combo[:result].present? %>
+              <p class="text-green-400 text-xs font-medium">⚡ <%= combo[:result] %></p>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
   </div>
 </div>

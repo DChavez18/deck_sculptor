@@ -10,27 +10,27 @@ RSpec.describe EdhrecService do
   let(:edhrec_response) do
     {
       "cardlist" => [
-        { "name" => "Sol Ring" },
-        { "name" => "Arcane Signet" },
-        { "name" => "Command Tower" },
-        { "name" => "Propaganda" },
-        { "name" => "Rhystic Study" },
-        { "name" => "Cyclonic Rift" },
-        { "name" => "Swords to Plowshares" },
-        { "name" => "Path to Exile" },
-        { "name" => "Demonic Tutor" },
-        { "name" => "Vampiric Tutor" },
-        { "name" => "Doubling Season" },
-        { "name" => "Inexorable Tide" },
-        { "name" => "Contagion Engine" },
-        { "name" => "Atraxa, Praetors' Voice" },
-        { "name" => "Deepglow Skate" },
-        { "name" => "Crystalline Crawler" },
-        { "name" => "Astral Cornucopia" },
-        { "name" => "Darksteel Ingot" },
-        { "name" => "Kodama's Reach" },
-        { "name" => "Nature's Lore" },
-        { "name" => "Skyshroud Claim" }
+        { "name" => "Sol Ring",              "type" => "Artifact" },
+        { "name" => "Arcane Signet",         "type" => "Artifact" },
+        { "name" => "Command Tower",         "type" => "Land" },
+        { "name" => "Propaganda",            "type" => "Enchantment" },
+        { "name" => "Rhystic Study",         "type" => "Enchantment" },
+        { "name" => "Cyclonic Rift",         "type" => "Instant" },
+        { "name" => "Swords to Plowshares",  "type" => "Instant" },
+        { "name" => "Path to Exile",         "type" => "Instant" },
+        { "name" => "Demonic Tutor",         "type" => "Sorcery" },
+        { "name" => "Vampiric Tutor",        "type" => "Instant" },
+        { "name" => "Doubling Season",       "type" => "Enchantment" },
+        { "name" => "Inexorable Tide",       "type" => "Enchantment" },
+        { "name" => "Contagion Engine",      "type" => "Artifact" },
+        { "name" => "Deepglow Skate",        "type" => "Creature — Fish" },
+        { "name" => "Crystalline Crawler",   "type" => "Artifact Creature — Construct" },
+        { "name" => "Astral Cornucopia",     "type" => "Artifact" },
+        { "name" => "Darksteel Ingot",       "type" => "Artifact" },
+        { "name" => "Kodama's Reach",        "type" => "Sorcery" },
+        { "name" => "Nature's Lore",         "type" => "Sorcery" },
+        { "name" => "Skyshroud Claim",       "type" => "Sorcery" },
+        { "name" => "Atraxa, Praetors' Voice", "type" => "Legendary Creature — Angel Horror" }
       ]
     }.to_json
   end
@@ -141,6 +141,67 @@ RSpec.describe EdhrecService do
 
       it "returns an empty array" do
         expect(service.top_cards(commander_name)).to eq([])
+      end
+    end
+  end
+
+  describe "#top_cards_with_details" do
+    context "when commander_data returns a valid response" do
+      before do
+        stub_request(:get, url).to_return(status: 200, body: edhrec_response, headers: { "Content-Type" => "application/json" })
+      end
+
+      it "returns an array of hashes with name, category, and reason keys" do
+        cards = service.top_cards_with_details(commander_name)
+        expect(cards).to be_an(Array)
+        expect(cards.first).to include(:name, :category, :reason)
+      end
+
+      it "returns at most 10 cards" do
+        expect(service.top_cards_with_details(commander_name).length).to be <= 10
+      end
+
+      it "includes the commander name in the reason" do
+        cards = service.top_cards_with_details(commander_name)
+        expect(cards.first[:reason]).to include(commander_name)
+      end
+
+      it "infers artifact category from type line" do
+        cards = service.top_cards_with_details(commander_name)
+        sol_ring = cards.find { |c| c[:name] == "Sol Ring" }
+        expect(sol_ring[:category]).to eq("artifact")
+      end
+
+      it "infers land category from type line" do
+        cards = service.top_cards_with_details(commander_name)
+        command_tower = cards.find { |c| c[:name] == "Command Tower" }
+        expect(command_tower[:category]).to eq("land")
+      end
+
+      it "infers instant category from type line" do
+        cards = service.top_cards_with_details(commander_name)
+        cyclonic_rift = cards.find { |c| c[:name] == "Cyclonic Rift" }
+        expect(cyclonic_rift[:category]).to eq("instant")
+      end
+    end
+
+    context "when commander_data returns nil" do
+      before do
+        stub_request(:get, url).to_return(status: 404, body: "Not Found")
+      end
+
+      it "returns an empty array" do
+        expect(service.top_cards_with_details(commander_name)).to eq([])
+      end
+    end
+
+    context "on a network error" do
+      before do
+        stub_request(:get, url).to_raise(StandardError.new("connection refused"))
+      end
+
+      it "returns an empty array" do
+        expect(service.top_cards_with_details(commander_name)).to eq([])
       end
     end
   end

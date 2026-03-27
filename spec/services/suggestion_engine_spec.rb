@@ -51,10 +51,14 @@ RSpec.describe SuggestionEngine do
     }
   end
 
+  let(:combo_service) { instance_double(ComboFinderService) }
+
   before do
     allow(ScryfallService).to receive(:new).and_return(scryfall_service)
     allow(scryfall_service).to receive(:commander_suggestions).and_return([ flying_creature, curve_filler, off_color_card ])
     allow(scryfall_service).to receive(:cards_by_color_identity).and_return([])
+    allow(ComboFinderService).to receive(:new).and_return(combo_service)
+    allow(combo_service).to receive(:find_combos).and_return([])
   end
 
   describe "#suggestions" do
@@ -182,6 +186,66 @@ RSpec.describe SuggestionEngine do
         it "does not award +2 for creature cards" do
           result = engine.suggestions.find { |r| r[:card]["id"] == "card-flying" }
           expect(result[:reasons]).not_to include("Fills underrepresented category")
+        end
+      end
+    end
+
+    describe "+3 combo piece" do
+      let(:combo_card) do
+        {
+          "id"             => "card-combo",
+          "name"           => "Thassa's Oracle",
+          "type_line"      => "Creature — Merfolk Wizard",
+          "cmc"            => 2.0,
+          "color_identity" => [ "U" ],
+          "keywords"       => [],
+          "oracle_text"    => "When Thassa's Oracle enters..."
+        }
+      end
+
+      before do
+        allow(scryfall_service).to receive(:commander_suggestions).and_return([ combo_card ])
+        create(:deck_card, deck: deck, card_name: "Demonic Consultation")
+        create(:deck_card, deck: deck, card_name: "Laboratory Maniac")
+      end
+
+      context "when 2+ combo partners are already in the deck" do
+        before do
+          allow(combo_service).to receive(:find_combos).and_return([
+            { cards: [ "Thassa's Oracle", "Demonic Consultation", "Laboratory Maniac" ], result: "Win the game", steps: "" }
+          ])
+        end
+
+        it "awards +3 to the card" do
+          result = engine.suggestions.find { |r| r[:card]["id"] == "card-combo" }
+          expect(result[:score]).to be >= 3
+          expect(result[:reasons]).to include("Combo piece")
+        end
+      end
+
+      context "when fewer than 2 combo partners are in the deck" do
+        before do
+          allow(combo_service).to receive(:find_combos).and_return([
+            { cards: [ "Thassa's Oracle", "Demonic Consultation" ], result: "Win the game", steps: "" }
+          ])
+        end
+
+        it "does not award the combo bonus" do
+          result = engine.suggestions.find { |r| r[:card]["id"] == "card-combo" }
+          expect(result[:reasons]).not_to include("Combo piece")
+        end
+      end
+
+      context "when the card is not part of any combo" do
+        before do
+          allow(combo_service).to receive(:find_combos).and_return([
+            { cards: [ "Demonic Consultation", "Laboratory Maniac", "Unrelated Card" ], result: "Win the game", steps: "" }
+          ])
+        end
+
+        it "does not award the combo bonus" do
+          result = engine.suggestions.find { |r| r[:card]["id"] == "card-combo" }
+          expect(result[:reasons]).not_to include("Combo piece")
         end
       end
     end

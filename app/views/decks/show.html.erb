@@ -2,16 +2,19 @@
   <%# Commander sidebar %>
   <div class="lg:col-span-1">
     <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden sticky top-6">
-      <% if @deck.commander.image_url.present? %>
-        <img src="<%= @deck.commander.image_url %>" alt="<%= @deck.commander.name %>" class="w-full">
-      <% else %>
-        <div class="h-48 bg-slate-700 flex items-center justify-center">
-          <span class="text-slate-500 text-5xl">🎴</span>
-        </div>
+      <%= link_to commander_path(@deck.commander) do %>
+        <% if @deck.commander.image_url.present? %>
+          <img src="<%= @deck.commander.image_url %>" alt="<%= @deck.commander.name %>" class="w-full hover:opacity-90 transition-opacity">
+        <% else %>
+          <div class="h-48 bg-slate-700 flex items-center justify-center hover:bg-slate-600 transition-colors">
+            <span class="text-slate-500 text-5xl">🎴</span>
+          </div>
+        <% end %>
       <% end %>
 
       <div class="p-4 space-y-2">
-        <h2 class="text-white font-bold text-lg leading-tight"><%= @deck.commander.name %></h2>
+        <%= link_to @deck.commander.name, commander_path(@deck.commander),
+            class: "text-white font-bold text-lg leading-tight hover:text-blue-400 transition-colors block" %>
         <p class="text-slate-400 text-xs"><%= @deck.commander.type_line %></p>
         <p class="text-slate-300 text-xs leading-relaxed"><%= @deck.commander.oracle_text %></p>
 

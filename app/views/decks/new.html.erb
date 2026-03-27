@@ -6,22 +6,45 @@
     <h2 class="text-lg font-semibold text-slate-300 mb-4">Choose a Commander</h2>
 
     <div data-controller="commander-search">
-      <input
-        type="text"
-        placeholder="Search for a commander..."
-        data-commander-search-target="input"
-        data-action="input->commander-search#search"
-        class="w-full bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md px-4 py-3 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-      >
+      <%# Search input area — hidden when a commander is preselected %>
+      <div data-commander-search-target="searchArea" class="<%= @preselected_commander ? 'hidden' : '' %>">
+        <input
+          type="text"
+          placeholder="Search for a commander..."
+          data-commander-search-target="input"
+          data-action="input->commander-search#search"
+          class="w-full bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md px-4 py-3 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+        >
 
-      <p data-commander-search-target="selectedDisplay"
-         class="text-slate-500 text-sm mt-2">
-        No commander selected.
-      </p>
+        <%= turbo_frame_tag "commander_results" do %>
+          <p class="text-slate-500 text-sm mt-3">Type a name to search commanders.</p>
+        <% end %>
+      </div>
 
-      <%= turbo_frame_tag "commander_results" do %>
-        <p class="text-slate-500 text-sm mt-3">Type a name to search commanders.</p>
-      <% end %>
+      <%# Commander preview — shown after selecting or when preselected %>
+      <div data-commander-search-target="preview" class="<%= @preselected_commander ? '' : 'hidden' %>">
+        <% if @preselected_commander %>
+          <div class="space-y-3">
+            <% if @preselected_commander.image_url.present? %>
+              <a href="<%= commander_path(@preselected_commander) %>">
+                <img src="<%= @preselected_commander.image_url %>" alt="<%= @preselected_commander.name %>"
+                     class="rounded-xl shadow-2xl shadow-blue-900/30 border border-slate-700 w-full max-w-xs">
+              </a>
+            <% end %>
+            <div>
+              <p class="text-white font-semibold"><%= @preselected_commander.name %></p>
+              <p class="text-slate-400 text-xs"><%= @preselected_commander.type_line %></p>
+            </div>
+            <button type="button" data-action="commander-search#clear"
+              class="text-slate-400 hover:text-white text-sm underline underline-offset-2">
+              Change commander
+            </button>
+          </div>
+        <% end %>
+      </div>
+
+      <input type="hidden" name="deck[commander_scryfall_id]" id="deck_commander_scryfall_id"
+             value="<%= @preselected_commander&.scryfall_id %>">
     </div>
   </div>
 
@@ -44,10 +67,6 @@
         <%= f.label :name, "Deck Name", class: "block text-sm text-slate-400 mb-1" %>
         <%= f.text_field :name, placeholder: "e.g. The Mind Sculptor Control",
             class: "w-full bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md px-4 py-3 focus:outline-none focus:border-blue-500" %>
-      </div>
-
-      <div>
-        <input type="hidden" name="deck[commander_scryfall_id]" id="deck_commander_scryfall_id">
       </div>
 
       <div>

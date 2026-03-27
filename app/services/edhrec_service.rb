@@ -29,6 +29,23 @@ class EdhrecService
     []
   end
 
+  def top_cards_with_details(commander_name)
+    data = commander_data(commander_name)
+    return [] unless data.is_a?(Hash)
+
+    card_list = data["cardlist"] || []
+    card_list.first(10).filter_map do |c|
+      next unless c["name"].present?
+      {
+        name:     c["name"],
+        category: infer_category(c["type"].to_s),
+        reason:   "Popular with #{commander_name}"
+      }
+    end
+  rescue StandardError
+    []
+  end
+
   def name_to_slug(name)
     name
       .downcase
@@ -36,5 +53,18 @@ class EdhrecService
       .gsub(/\s+/, "-")
       .squeeze("-")
       .strip
+  end
+
+  private
+
+  def infer_category(type_line)
+    return "creature"    if type_line.include?("Creature")
+    return "instant"     if type_line.include?("Instant")
+    return "sorcery"     if type_line.include?("Sorcery")
+    return "enchantment" if type_line.include?("Enchantment")
+    return "artifact"    if type_line.include?("Artifact")
+    return "land"        if type_line.include?("Land")
+
+    "other"
   end
 end

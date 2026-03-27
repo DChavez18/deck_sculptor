@@ -4,6 +4,7 @@
   <% else %>
     <div class="mt-3 space-y-2">
       <% @results.each do |card| %>
+        <% db_id = @commander_db_ids[card["id"]] %>
         <div class="bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 flex items-center justify-between hover:border-blue-500 transition-colors">
           <div>
             <p class="text-white text-sm font-medium"><%= card["name"] %></p>
@@ -15,6 +16,9 @@
             data-action="commander-search#select"
             data-commander-id="<%= card["id"] %>"
             data-commander-name="<%= card["name"] %>"
+            data-commander-type="<%= card["type_line"] %>"
+            data-card-image="<%= card.dig("image_uris", "normal") %>"
+            data-commander-db-id="<%= db_id %>"
             class="text-blue-400 hover:text-blue-300 text-sm font-medium shrink-0 ml-4"
           >
             Select

@@ -68,6 +68,11 @@ class SuggestionEngine
       reasons << "Fits #{detected_archetype} strategy"
     end
 
+    if combo_synergy_boost?(card)
+      score   += 3
+      reasons << "Combo piece"
+    end
+
     { card: card, score: score, reasons: reasons }
   end
 
@@ -89,6 +94,24 @@ class SuggestionEngine
     return false unless creature_count < CREATURE_THRESHOLD
 
     card["type_line"].to_s.include?("Creature")
+  end
+
+  def combo_synergy_boost?(card)
+    return false if deck_combos.empty?
+
+    deck_names = Set.new(@deck.deck_cards.pluck(:card_name)) << @deck.commander.name
+    card_name  = card["name"]
+
+    deck_combos.any? do |combo|
+      next false unless combo[:cards].include?(card_name)
+
+      other_combo_cards = combo[:cards].reject { |c| c == card_name }
+      (Set.new(other_combo_cards) & deck_names).size >= 2
+    end
+  end
+
+  def deck_combos
+    @deck_combos ||= ComboFinderService.new.find_combos([ @deck.commander.name ])
   end
 
   def archetype_boost(card)

@@ -7,6 +7,9 @@ class DecksController < ApplicationController
 
   def new
     @deck = Deck.new
+    if params[:commander_id].present?
+      @preselected_commander = Commander.find_by(id: params[:commander_id])
+    end
   end
 
   def create
