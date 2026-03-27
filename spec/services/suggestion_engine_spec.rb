@@ -185,6 +185,66 @@ RSpec.describe SuggestionEngine do
         result = engine.suggestions.find { |r| r[:card]["id"] == "card-curve" }
         expect(result[:reasons]).not_to include(a_string_matching(/Shares keyword/))
       end
+
+      describe "qualified keyword specificity (e.g. amass Orcs vs amass Zombies)" do
+        let(:sauron_commander) do
+          create(:commander, raw_data: {
+            "color_identity" => [ "B", "R", "W" ],
+            "keywords"       => [ "Amass" ],
+            "oracle_text"    => "Whenever you cast a spell, amass Orcs 1."
+          })
+        end
+        let(:sauron_deck) { create(:deck, commander: sauron_commander) }
+        subject(:sauron_engine) { described_class.new(sauron_deck) }
+
+        let(:orc_amasser) do
+          {
+            "id"             => "card-orc-amass",
+            "name"           => "Army of Mordor",
+            "type_line"      => "Sorcery",
+            "cmc"            => 3.0,
+            "color_identity" => [ "B" ],
+            "keywords"       => [ "Amass" ],
+            "oracle_text"    => "amass Orcs 3."
+          }
+        end
+
+        let(:zombie_amasser) do
+          {
+            "id"             => "card-zombie-amass",
+            "name"           => "Zombie Horde",
+            "type_line"      => "Sorcery",
+            "cmc"            => 3.0,
+            "color_identity" => [ "B" ],
+            "keywords"       => [ "Amass" ],
+            "oracle_text"    => "amass Zombies 3."
+          }
+        end
+
+        before do
+          allow(scryfall_service).to receive(:commander_suggestions).and_return([ orc_amasser, zombie_amasser ])
+          allow(scryfall_service).to receive(:cards_by_color_identity).and_return([])
+          allow(scryfall_service).to receive(:find_card_by_name).and_return(nil)
+          allow(edhrec_service).to receive(:top_cards_with_details).and_return([])
+          allow(combo_service).to receive(:find_combos).and_return([])
+        end
+
+        it "awards keyword synergy to a card with the matching qualified phrase" do
+          result = sauron_engine.suggestions.find { |r| r[:card]["id"] == "card-orc-amass" }
+          expect(result[:reasons]).to include(a_string_matching(/Shares keyword/))
+        end
+
+        it "does not award keyword synergy to a card with a different qualified noun" do
+          result = sauron_engine.suggestions.find { |r| r[:card]["id"] == "card-zombie-amass" }
+          expect(result[:reasons]).not_to include(a_string_matching(/Shares keyword/))
+        end
+
+        it "scores the matching-qualifier card higher than the non-matching one" do
+          orc_result    = sauron_engine.suggestions.find { |r| r[:card]["id"] == "card-orc-amass" }
+          zombie_result = sauron_engine.suggestions.find { |r| r[:card]["id"] == "card-zombie-amass" }
+          expect(orc_result[:score]).to be > zombie_result[:score]
+        end
+      end
     end
 
     describe "+2 fills mana curve gap" do

@@ -54,10 +54,15 @@ class SuggestionEngine
       reasons << "Within color identity"
     end
 
+    qualified_map = commander_qualified_keywords(commander_card)
     shared = (commander_card["keywords"] || []) & (card["keywords"] || [])
-    if shared.any?
+    matching = shared.select do |kw|
+      qualifier = qualified_map[kw.downcase]
+      qualifier ? card["oracle_text"].to_s.match?(/\b#{Regexp.escape(kw)}\s+#{Regexp.escape(qualifier)}/i) : true
+    end
+    if matching.any?
       score   += 3
-      reasons << "Shares keyword: #{shared.first}"
+      reasons << "Shares keyword: #{matching.first}"
     end
 
     gap = mana_curve_gap
@@ -109,6 +114,15 @@ class SuggestionEngine
       [ 1, "Popular pick" ]
     else
       [ 0, nil ]
+    end
+  end
+
+  def commander_qualified_keywords(commander_card)
+    oracle    = commander_card["oracle_text"].to_s
+    keywords  = commander_card["keywords"] || []
+    keywords.each_with_object({}) do |kw, result|
+      match = oracle.match(/\b#{Regexp.escape(kw)}\s+([A-Z][a-zA-Z]+)/i)
+      result[kw.downcase] = match[1] if match
     end
   end
 
