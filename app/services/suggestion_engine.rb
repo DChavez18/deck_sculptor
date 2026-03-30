@@ -32,6 +32,35 @@ class SuggestionEngine
       .sort_by { |s| -s[:score] }
   end
 
+  def more_like(scryfall_ids)
+    return [] if scryfall_ids.empty?
+
+    service     = ScryfallService.new
+    liked_cards = scryfall_ids.filter_map { |id| CardCache.fetch(id) || service.find_card_by_id(id) }
+    return [] if liked_cards.empty?
+
+    liked_keywords   = liked_cards.flat_map { |c| c["keywords"] || [] }.uniq
+    liked_type_words = liked_cards.flat_map { |c| c["type_line"].to_s.split(/[\s\u2014\-]+/) }.map(&:downcase).uniq
+    liked_cmcs       = liked_cards.map { |c| c["cmc"].to_i }
+    cmc_min, cmc_max = liked_cmcs.minmax
+
+    commander_card = @deck.commander.raw_data.presence || {}
+    candidates     = service.commander_suggestions(commander_card).uniq { |c| c["name"] }
+
+    deck_ids       = @deck.deck_cards.pluck(:scryfall_id).to_set
+    deck_names     = @deck.deck_cards.pluck(:card_name).map { |n| n.to_s.downcase }.to_set
+    feedbacked_ids = @deck.suggestion_feedbacks.pluck(:scryfall_id).to_set
+    liked_ids_set  = scryfall_ids.to_set
+
+    candidates
+      .reject { |c| deck_ids.include?(c["id"]) || deck_names.include?(c["name"].to_s.downcase) }
+      .reject { |c| feedbacked_ids.include?(c["id"]) }
+      .reject { |c| liked_ids_set.include?(c["id"]) }
+      .map    { |c| score_for_more_like(c, liked_keywords, liked_type_words, cmc_min, cmc_max) }
+      .sort_by { |s| -s[:score] }
+      .first(3)
+  end
+
   private
 
   def fetch_edhrec_cards(service)
@@ -188,5 +217,30 @@ class SuggestionEngine
     keyword_match  = boost[:keywords].any?   { |kw|  card_oracle.include?(kw) }
 
     (category_match || keyword_match) ? 2 : 0
+  end
+
+  def score_for_more_like(card, liked_keywords, liked_type_words, cmc_min, cmc_max)
+    score   = 0
+    reasons = []
+
+    matching_kws = (card["keywords"] || []) & liked_keywords
+    if matching_kws.any?
+      score   += 2
+      reasons << "Shares keyword: #{matching_kws.first}"
+    end
+
+    card_type_words = card["type_line"].to_s.split(/[\s\u2014\-]+/).map(&:downcase)
+    if (card_type_words & liked_type_words).any?
+      score   += 1
+      reasons << "Matches card type"
+    end
+
+    card_cmc = card["cmc"].to_i
+    if cmc_min && cmc_max && card_cmc >= cmc_min && card_cmc <= cmc_max
+      score   += 1
+      reasons << "Similar mana cost"
+    end
+
+    { card: card, score: score, reasons: reasons }
   end
 end

@@ -4,6 +4,7 @@ RSpec.describe Deck, type: :model do
   describe "associations" do
     it { should belong_to(:commander) }
     it { should have_many(:deck_cards).dependent(:destroy) }
+    it { should have_many(:suggestion_feedbacks).dependent(:destroy) }
   end
 
   describe "validations" do

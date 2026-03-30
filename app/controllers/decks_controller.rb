@@ -54,6 +54,7 @@ class DecksController < ApplicationController
   def suggestions
     @suggestions = SuggestionEngine.new(@deck).suggestions
     @edhrec_top  = EdhrecService.new.top_cards(@deck.commander.name)
+    @feedbacks   = @deck.suggestion_feedbacks.index_by(&:scryfall_id)
   end
 
   def analysis

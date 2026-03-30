@@ -37,10 +37,11 @@ Named after Jace, the Mind Sculptor.
 - Phase 4 hotfix-2 complete and merged — live card search, card images in deck list
 - Phase 5 complete and merged — strategy analysis, archetype detection, color gap analysis
 - Phase 6 complete and merged — commander profile, EDHREC integration, combo synergy
-- Phase 7 complete — smarter suggestions, EDHREC fix, intent questionnaire, edit/delete
-- 253 examples, 0 failures
+- Phase 7 complete and merged — smarter suggestions, EDHREC fix, intent questionnaire, edit/delete
+- Phase 8 complete — flip card UI, thumbs up/down feedback, more-like-this suggestions
+- 285 examples, 0 failures
 - CI green
-- Currently on branch: `phase-7-suggestions` — ready to PR into main
+- Currently on branch: `phase-8-suggestions-ux`
 
 ## What was built in Phase 2
 - app/services/scryfall_service.rb — search_commander, find_commander,
@@ -132,10 +133,26 @@ Named after Jace, the Mind Sculptor.
 - DeckCard — a card in a deck with category, cmc, color_identity (string)
 - CardCache — local Scryfall response cache, 7-day TTL
 
+## What was built in Phase 8
+- SuggestionFeedback model — deck_id, scryfall_id, card_name, feedback (up/down),
+  unique index on [deck_id, scryfall_id], belongs_to :deck
+- SuggestionFeedbacksController#create — upserts feedback; thumbs DOWN responds
+  with Turbo Stream remove; thumbs UP calls more_like and appends new cards
+- SuggestionEngine#more_like — fetches liked cards from CardCache, extracts shared
+  keyword/type/CMC signals, scores candidates against signals, returns top 3 not
+  already in deck or already given feedback
+- card_flip_controller.js — Stimulus controller toggling .is-flipped class + stopPropagation
+- 3D CSS card flip — perspective wrapper, preserve-3d inner, backface-visibility,
+  .is-flipped rotates 180deg on Y axis, transition 0.4s
+- _suggestion_card.html.erb partial — front face (full art + overlays) / back face
+  (stats, oracle text, Add to Deck, thumbs SVG buttons); cards without image skip
+  flip and show back face only; all cards fixed at 420px height
+- Suggestions view now renders the partial, wraps grid in id="suggestions-grid"
+  for Turbo Stream targeting; filter bar and search still work
+- Thumbs highlighted green (up) or red (down) when feedback already saved
+
 ## Upcoming phases
-- Phase 8: AI deck advisor chat (Claude API)
 - Phase 9: Deployment to Railway
 
 ## Current task
-Phase 7 complete — commit CLAUDE.md, push phase-7-suggestions, PR into main,
-then create branch phase-8-ai-advisor and begin Phase 8.
+Phase 8 complete — commit, push phase-8-suggestions-ux, PR into main.

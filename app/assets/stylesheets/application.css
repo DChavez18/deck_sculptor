@@ -8,3 +8,35 @@
  *
  * Consider organizing styles into separate files for maintainability.
  */
+
+/* ---- 3D card-flip ---- */
+.card-flip-wrapper {
+  perspective: 1000px;
+}
+
+.card-flip-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.4s ease;
+}
+
+.card-flip-inner.is-flipped {
+  transform: rotateY(180deg);
+}
+
+/* Front face: position:relative so it contributes natural height to the layout */
+.card-face {
+  position: relative;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+/* Back face: absolute so it overlays the same space as the front when flipped */
+.card-face-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  overflow-y: auto;
+}

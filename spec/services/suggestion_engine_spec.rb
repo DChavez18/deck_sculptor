@@ -146,6 +146,90 @@ RSpec.describe SuggestionEngine do
     end
   end
 
+  describe "#more_like" do
+    let(:liked_card) do
+      {
+        "id"             => "liked-1",
+        "name"           => "Sol Ring",
+        "type_line"      => "Artifact",
+        "cmc"            => 1.0,
+        "keywords"       => [ "Flying" ],
+        "oracle_text"    => "{T}: Add {C}{C}."
+      }
+    end
+
+    let(:similar_card) do
+      {
+        "id"             => "similar-1",
+        "name"           => "Arcane Signet",
+        "type_line"      => "Artifact",
+        "cmc"            => 2.0,
+        "color_identity" => [ "U" ],
+        "keywords"       => [ "Flying" ],
+        "oracle_text"    => "{T}: Add one mana of any color in your commander's color identity."
+      }
+    end
+
+    let(:unrelated_card) do
+      {
+        "id"             => "unrelated-1",
+        "name"           => "Llanowar Elves",
+        "type_line"      => "Creature — Elf Druid",
+        "cmc"            => 1.0,
+        "color_identity" => [ "G" ],
+        "keywords"       => [],
+        "oracle_text"    => "{T}: Add {G}."
+      }
+    end
+
+    before do
+      CardCache.store("liked-1", "Sol Ring", liked_card)
+      allow(scryfall_service).to receive(:commander_suggestions).and_return([ similar_card, unrelated_card ])
+    end
+
+    it "returns cards matching keyword signals from liked cards" do
+      results = engine.more_like([ "liked-1" ])
+      names   = results.map { |r| r[:card]["name"] }
+      expect(names).to include("Arcane Signet")
+    end
+
+    it "ranks keyword-matching cards above unrelated cards" do
+      results  = engine.more_like([ "liked-1" ])
+      similar  = results.find { |r| r[:card]["id"] == "similar-1" }
+      unrelated = results.find { |r| r[:card]["id"] == "unrelated-1" }
+      expect(similar[:score]).to be > unrelated[:score]
+    end
+
+    it "excludes cards that already have feedback for this deck" do
+      create(:suggestion_feedback, deck: deck, scryfall_id: "similar-1",
+             card_name: "Arcane Signet", feedback: "down")
+      results = engine.more_like([ "liked-1" ])
+      names   = results.map { |r| r[:card]["name"] }
+      expect(names).not_to include("Arcane Signet")
+    end
+
+    it "returns at most 3 suggestions" do
+      extra_cards = (1..5).map do |i|
+        { "id" => "extra-#{i}", "name" => "Card #{i}", "type_line" => "Artifact",
+          "cmc" => 1.0, "keywords" => [ "Flying" ], "oracle_text" => "" }
+      end
+      allow(scryfall_service).to receive(:commander_suggestions).and_return(extra_cards)
+      results = engine.more_like([ "liked-1" ])
+      expect(results.size).to be <= 3
+    end
+
+    it "returns empty array when scryfall_ids is empty" do
+      expect(engine.more_like([])).to eq([])
+    end
+
+    it "excludes the liked cards themselves from results" do
+      allow(scryfall_service).to receive(:commander_suggestions).and_return([ liked_card, similar_card ])
+      results = engine.more_like([ "liked-1" ])
+      ids     = results.map { |r| r[:card]["id"] }
+      expect(ids).not_to include("liked-1")
+    end
+  end
+
   describe "scoring" do
     describe "+1 within color identity" do
       it "awards +1 to in-color cards" do
