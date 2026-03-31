@@ -173,7 +173,7 @@ RSpec.describe ScryfallService, type: :service do
   # ── search_cards ─────────────────────────────────────────────────────────────
 
   describe "#search_cards" do
-    let(:url) { "#{base_url}/cards/search?q=proliferate" }
+    let(:url) { "#{base_url}/cards/search?q=proliferate+-is%3Adigital+game%3Apaper" }
 
     context "when results are found" do
       before do
@@ -267,7 +267,7 @@ RSpec.describe ScryfallService, type: :service do
 
   describe "#cards_by_color_identity" do
     context "with a single color" do
-      let(:url) { "#{base_url}/cards/search?q=id%3C%3DU" }
+      let(:url) { "#{base_url}/cards/search?q=id%3C%3DU+legal%3Acommander+-is%3Adigital+game%3Apaper" }
 
       before do
         stub_request(:get, url).to_return(status: 200, body: search_response)
@@ -281,7 +281,7 @@ RSpec.describe ScryfallService, type: :service do
     end
 
     context "with multiple colors" do
-      let(:url) { "#{base_url}/cards/search?q=id%3C%3DBGUW" }
+      let(:url) { "#{base_url}/cards/search?q=id%3C%3DBGUW+legal%3Acommander+-is%3Adigital+game%3Apaper" }
 
       before do
         stub_request(:get, url).to_return(status: 200, body: search_response)
@@ -294,7 +294,7 @@ RSpec.describe ScryfallService, type: :service do
     end
 
     context "with options[:type]" do
-      let(:url) { "#{base_url}/cards/search?q=id%3C%3DU+t%3ACreature" }
+      let(:url) { "#{base_url}/cards/search?q=id%3C%3DU+legal%3Acommander+-is%3Adigital+game%3Apaper+t%3ACreature" }
 
       before do
         stub_request(:get, url).to_return(status: 200, body: search_response)
@@ -307,7 +307,7 @@ RSpec.describe ScryfallService, type: :service do
     end
 
     context "with options[:exclude_ids]" do
-      let(:url) { "#{base_url}/cards/search?q=id%3C%3DU+-id%3Aabc-123" }
+      let(:url) { "#{base_url}/cards/search?q=id%3C%3DU+legal%3Acommander+-is%3Adigital+game%3Apaper+-id%3Aabc-123" }
 
       before do
         stub_request(:get, url).to_return(status: 200, body: search_response)
@@ -320,7 +320,7 @@ RSpec.describe ScryfallService, type: :service do
     end
 
     context "when the API returns no results" do
-      let(:url) { "#{base_url}/cards/search?q=id%3C%3DU" }
+      let(:url) { "#{base_url}/cards/search?q=id%3C%3DU+legal%3Acommander+-is%3Adigital+game%3Apaper" }
 
       before do
         stub_request(:get, url).to_return(status: 404, body: not_found_response)
@@ -332,11 +332,76 @@ RSpec.describe ScryfallService, type: :service do
     end
   end
 
+  # ── cards_by_function ────────────────────────────────────────────────────────
+
+  describe "#cards_by_function" do
+    let(:colors) { %w[B G W] }
+    let(:tag)    { "ramp" }
+
+    context "with correct query string construction" do
+      let(:url) { "#{base_url}/cards/search?q=oracletag%3Aramp+id%3C%3Dbgw+legal%3Acommander+-is%3Adigital+game%3Apaper" }
+
+      before do
+        stub_request(:get, url).to_return(status: 200, body: search_response)
+      end
+
+      it "returns an array of card hashes" do
+        result = service.cards_by_function(tag, colors)
+        expect(result).to be_an(Array)
+        expect(result.first["name"]).to eq("Atraxa, Praetors' Voice")
+      end
+
+      it "builds the correct query" do
+        service.cards_by_function(tag, colors)
+        expect(a_request(:get, url)).to have_been_made
+      end
+    end
+
+    context "with a budget option" do
+      let(:url) { "#{base_url}/cards/search?q=oracletag%3Aramp+id%3C%3Dbgw+legal%3Acommander+-is%3Adigital+game%3Apaper+usd%3C%3D1.0" }
+
+      before do
+        stub_request(:get, url).to_return(status: 200, body: search_response)
+      end
+
+      it "appends a usd filter to the query" do
+        service.cards_by_function(tag, colors, budget: 1.00)
+        expect(a_request(:get, url)).to have_been_made
+      end
+    end
+
+    context "caching behaviour" do
+      let(:url) { "#{base_url}/cards/search?q=oracletag%3Aramp+id%3C%3Dbgw+legal%3Acommander+-is%3Adigital+game%3Apaper" }
+
+      before do
+        stub_request(:get, url).to_return(status: 200, body: search_response)
+      end
+
+      it "caches the result after the first call" do
+        service.cards_by_function(tag, colors)
+        service.cards_by_function(tag, colors)
+        expect(a_request(:get, url)).to have_been_made.once
+      end
+    end
+
+    context "when the API returns a non-200 response" do
+      let(:url) { "#{base_url}/cards/search?q=oracletag%3Aramp+id%3C%3Dbgw+legal%3Acommander+-is%3Adigital+game%3Apaper" }
+
+      before do
+        stub_request(:get, url).to_return(status: 404, body: not_found_response)
+      end
+
+      it "returns an empty array" do
+        expect(service.cards_by_function(tag, colors)).to eq([])
+      end
+    end
+  end
+
   # ── commander_suggestions ────────────────────────────────────────────────────
 
   describe "#commander_suggestions" do
     let(:url) do
-      "#{base_url}/cards/search?q=id%3C%3DBGUW+o%3AFlying"
+      "#{base_url}/cards/search?q=id%3C%3DBGUW+o%3AFlying+legal%3Acommander+-is%3Adigital+game%3Apaper"
     end
 
     before do
@@ -355,7 +420,7 @@ RSpec.describe ScryfallService, type: :service do
 
     context "when the commander has no keywords" do
       let(:commander_no_keywords) { card_hash.merge("keywords" => []) }
-      let(:fallback_url) { "#{base_url}/cards/search?q=id%3C%3DBGUW" }
+      let(:fallback_url) { "#{base_url}/cards/search?q=id%3C%3DBGUW+legal%3Acommander+-is%3Adigital+game%3Apaper" }
 
       before do
         stub_request(:get, fallback_url).to_return(status: 200, body: search_response)

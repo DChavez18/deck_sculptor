@@ -3,6 +3,53 @@
   <h1 class="text-2xl font-bold text-white">Suggestions for <%= @deck.name %></h1>
 </div>
 
+<%# Intent summary panel %>
+<div class="bg-slate-800 border border-slate-700 rounded-xl px-5 py-4 mb-5">
+  <% if @deck.intent_completed? %>
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="text-slate-400 text-xs font-medium uppercase tracking-wide">Deck Intent</span>
+
+      <% if @deck.win_condition.present? %>
+        <span class="bg-purple-800 text-purple-200 text-xs px-2.5 py-1 rounded-full">
+          Win: <%= @deck.win_condition %>
+        </span>
+      <% end %>
+
+      <% if @deck.archetype.present? %>
+        <span class="bg-blue-800 text-blue-200 text-xs px-2.5 py-1 rounded-full capitalize">
+          Playstyle: <%= @deck.archetype %>
+        </span>
+      <% end %>
+
+      <% if @deck.budget.present? %>
+        <% budget_labels = { "casual" => "Casual ($50)", "optimized" => "Optimized ($200)", "competitive" => "Competitive" } %>
+        <span class="bg-green-800 text-green-200 text-xs px-2.5 py-1 rounded-full">
+          Budget: <%= budget_labels.fetch(@deck.budget, @deck.budget.capitalize) %>
+        </span>
+      <% end %>
+
+      <% if @deck.themes.present? %>
+        <% @deck.themes.split(",").map(&:strip).first(3).each do |theme| %>
+          <span class="bg-teal-800 text-teal-200 text-xs px-2.5 py-1 rounded-full"><%= theme %></span>
+        <% end %>
+      <% end %>
+
+      <span class="ml-auto">
+        <%= link_to "Edit Deck", edit_deck_path(@deck),
+            class: "text-slate-400 hover:text-white text-xs underline underline-offset-2" %>
+      </span>
+    </div>
+  <% else %>
+    <div class="flex items-center justify-between">
+      <p class="text-slate-400 text-sm">
+        Add your deck intent to get better suggestions →
+      </p>
+      <%= link_to "Set Deck Intent", intent_deck_path(@deck),
+          class: "bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium px-3 py-1.5 rounded-md transition-colors" %>
+    </div>
+  <% end %>
+</div>
+
 <% if @edhrec_top.any? %>
   <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 mb-6">
     <h2 class="text-white font-semibold mb-3">Popular with this Commander <span class="text-slate-500 text-xs font-normal ml-1">via EDHREC</span></h2>
@@ -50,9 +97,13 @@
 
     <%# Card grid %>
     <div id="suggestions-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-      <% @suggestions.each do |suggestion| %>
+      <% @displayed_suggestions.each do |suggestion| %>
         <%= render "decks/suggestion_card", suggestion: suggestion, deck: @deck, feedbacks: @feedbacks %>
       <% end %>
     </div>
+
+    <% if @suggestions.size > 30 %>
+      <%= render "decks/load_more_button", deck: @deck, next_page: 2 %>
+    <% end %>
   </div>
 <% end %>

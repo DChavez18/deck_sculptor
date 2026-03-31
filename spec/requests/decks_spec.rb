@@ -83,16 +83,166 @@ RSpec.describe "Decks", type: :request do
 
   describe "GET /decks/:id/suggestions" do
     let(:suggestion_engine) { instance_double(SuggestionEngine, suggestions: []) }
+    let(:intent_engine)     { instance_double(IntentEngine, suggestions: []) }
     let(:edhrec_service)    { instance_double(EdhrecService, top_cards: []) }
 
     before do
       allow(SuggestionEngine).to receive(:new).and_return(suggestion_engine)
+      allow(IntentEngine).to receive(:new).and_return(intent_engine)
       allow(EdhrecService).to receive(:new).and_return(edhrec_service)
       get suggestions_deck_path(deck)
     end
 
     it { expect(response).to have_http_status(:ok) }
+
+    it "calls both SuggestionEngine and IntentEngine" do
+      expect(SuggestionEngine).to have_received(:new).with(deck)
+      expect(IntentEngine).to have_received(:new).with(deck)
+    end
+
+    context "when a card has existing feedback" do
+      let(:feedbacked_card) do
+        { card: { "id"             => "feedbacked-1",
+                  "name"           => "Feedbacked Card",
+                  "type_line"      => "Artifact",
+                  "cmc"            => 1,
+                  "color_identity" => [],
+                  "keywords"       => [],
+                  "oracle_text"    => "",
+                  "image_uris"     => {} },
+          score: 5, reasons: [], pool: "Ramp" }
+      end
+      let(:merge_instance) { instance_double(MergeSuggestions) }
+
+      before do
+        allow(MergeSuggestions).to receive(:new).and_return(merge_instance)
+        allow(merge_instance).to receive(:call).and_return([ feedbacked_card ])
+      end
+
+      it "excludes cards with 'down' feedback from the rendered page" do
+        create(:suggestion_feedback, deck: deck, scryfall_id: "feedbacked-1",
+               card_name: "Feedbacked Card", feedback: "down")
+        get suggestions_deck_path(deck)
+        expect(response.body).not_to include("feedbacked-1")
+      end
+
+      it "excludes cards with 'up' feedback from the rendered page" do
+        create(:suggestion_feedback, deck: deck, scryfall_id: "feedbacked-1",
+               card_name: "Feedbacked Card", feedback: "up")
+        get suggestions_deck_path(deck)
+        expect(response.body).not_to include("feedbacked-1")
+      end
+    end
+
+    context "when a card uses scryfall_id key instead of id" do
+      let(:feedbacked_card_alt_key) do
+        { card: { "scryfall_id"   => "feedbacked-alt",
+                  "name"           => "Alt Key Card",
+                  "type_line"      => "Artifact",
+                  "cmc"            => 1,
+                  "color_identity" => [],
+                  "keywords"       => [],
+                  "oracle_text"    => "",
+                  "image_uris"     => {} },
+          score: 5, reasons: [], pool: "Ramp" }
+      end
+      let(:merge_instance) { instance_double(MergeSuggestions) }
+
+      before do
+        create(:suggestion_feedback, deck: deck, scryfall_id: "feedbacked-alt",
+               card_name: "Alt Key Card", feedback: "down")
+        allow(MergeSuggestions).to receive(:new).and_return(merge_instance)
+        allow(merge_instance).to receive(:call).and_return([ feedbacked_card_alt_key ])
+        get suggestions_deck_path(deck)
+      end
+
+      it "excludes the card via the scryfall_id fallback" do
+        expect(response.body).not_to include("feedbacked-alt")
+      end
+    end
   end
+
+  describe "GET /decks/:id/more_suggestions" do
+    let(:suggestion_engine) { instance_double(SuggestionEngine, suggestions: []) }
+    let(:intent_engine)     { instance_double(IntentEngine, suggestions: []) }
+    let(:turbo_headers)     { { "Accept" => "text/vnd.turbo-stream.html" } }
+
+    def make_suggestion(id, score)
+      { card: { "id"             => id,
+                "name"           => "Card #{id}",
+                "type_line"      => "Artifact",
+                "cmc"            => 1,
+                "color_identity" => [],
+                "keywords"       => [],
+                "oracle_text"    => "",
+                "image_uris"     => {} },
+        score:   score,
+        reasons: [],
+        pool:    "Ramp" }
+    end
+
+    before do
+      allow(SuggestionEngine).to receive(:new).and_return(suggestion_engine)
+      allow(IntentEngine).to receive(:new).and_return(intent_engine)
+    end
+
+    context "when page 2 has cards and no further pages remain" do
+      let(:all_suggestions) do
+        (1..31).map { |i| make_suggestion("pg-card-#{i}", 32 - i) }
+      end
+      let(:merge_instance) { instance_double(MergeSuggestions, call: all_suggestions) }
+
+      before do
+        allow(MergeSuggestions).to receive(:new).and_return(merge_instance)
+      end
+
+      it "returns turbo stream appending the page-2 card to suggestions-grid" do
+        get more_suggestions_deck_path(deck, page: 2), headers: turbo_headers
+        expect(response).to have_http_status(:ok)
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        expect(response.body).to include("pg-card-31")
+        expect(response.body).to include("suggestions-grid")
+      end
+
+      it "removes the load-more button when no further pages remain" do
+        get more_suggestions_deck_path(deck, page: 2), headers: turbo_headers
+        expect(response.body).to include("remove")
+        expect(response.body).to include("load-more-btn")
+      end
+    end
+
+    context "when there are more pages after the requested one" do
+      let(:all_suggestions) do
+        (1..61).map { |i| make_suggestion("multi-#{i}", 62 - i) }
+      end
+      let(:merge_instance) { instance_double(MergeSuggestions, call: all_suggestions) }
+
+      before do
+        allow(MergeSuggestions).to receive(:new).and_return(merge_instance)
+      end
+
+      it "updates the load-more button with the next page number" do
+        get more_suggestions_deck_path(deck, page: 1), headers: turbo_headers
+        expect(response.body).to include("load-more-btn")
+        expect(response.body).to include("page=2")
+      end
+    end
+
+    context "when no suggestions remain on the requested page" do
+      let(:merge_instance) { instance_double(MergeSuggestions, call: []) }
+
+      before do
+        allow(MergeSuggestions).to receive(:new).and_return(merge_instance)
+      end
+
+      it "removes the load-more button" do
+        get more_suggestions_deck_path(deck, page: 2), headers: turbo_headers
+        expect(response.body).to include("remove")
+        expect(response.body).to include("load-more-btn")
+      end
+    end
+  end
+
 
   describe "GET /decks/:id/analysis" do
     let(:combo_service) { instance_double(ComboFinderService, find_combos: []) }

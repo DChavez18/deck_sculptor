@@ -94,6 +94,45 @@ RSpec.describe "DeckCards", type: :request do
         expect(response).to redirect_to(deck_path(deck))
       end
     end
+
+    context "when adding from the suggestions page via Turbo Stream" do
+      before do
+        allow(scryfall_service).to receive(:find_card_by_id).with("scryfall-123").and_return(card_data)
+      end
+
+      let(:params) { { deck_card: { scryfall_id: "scryfall-123", card_name: "Counterspell", quantity: 1, return_to: "suggestions" } } }
+
+      it "responds with a Turbo Stream that removes the card from the suggestions grid" do
+        post deck_deck_cards_path(deck),
+          params: params,
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        expect(response.body).to include("remove")
+        expect(response.body).to include("suggestion-scryfall-123")
+      end
+
+      it "still creates the deck card" do
+        expect {
+          post deck_deck_cards_path(deck),
+            params: params,
+            headers: { "Accept" => "text/vnd.turbo-stream.html" }
+        }.to change(DeckCard, :count).by(1)
+      end
+    end
+
+    context "when adding from the suggestions page via HTML" do
+      before do
+        allow(scryfall_service).to receive(:find_card_by_id).with("scryfall-123").and_return(card_data)
+      end
+
+      let(:params) { { deck_card: { scryfall_id: "scryfall-123", card_name: "Counterspell", quantity: 1, return_to: "suggestions" } } }
+
+      it "redirects back to the suggestions page" do
+        post deck_deck_cards_path(deck), params: params
+        expect(response).to redirect_to(suggestions_deck_path(deck))
+      end
+    end
   end
 
   describe "PATCH /decks/:deck_id/deck_cards/:id" do

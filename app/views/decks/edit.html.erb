@@ -55,6 +55,28 @@
       </div>
 
       <div>
+        <%= f.label :win_condition, "Win Condition", class: "block text-sm text-slate-400 mb-1" %>
+        <%= f.select :win_condition,
+            ["Combat damage", "Infinite combo", "Mill opponents", "Poison / Infect", "Card advantage engine", "Other"],
+            { include_blank: "— Select win condition —" },
+            class: "w-full bg-slate-700 border border-slate-600 text-white rounded-md px-4 py-3 focus:outline-none focus:border-blue-500" %>
+      </div>
+
+      <div>
+        <%= f.label :budget, "Budget", class: "block text-sm text-slate-400 mb-1" %>
+        <%= f.select :budget,
+            [["Casual (under $50)", "casual"], ["Optimized ($50–$200)", "optimized"], ["Competitive ($200+)", "competitive"]],
+            { include_blank: "— Select budget —" },
+            class: "w-full bg-slate-700 border border-slate-600 text-white rounded-md px-4 py-3 focus:outline-none focus:border-blue-500" %>
+      </div>
+
+      <div>
+        <%= f.label :themes, "Themes (comma-separated)", class: "block text-sm text-slate-400 mb-1" %>
+        <%= f.text_field :themes, placeholder: "e.g. tokens, spellslinger, graveyard recursion",
+            class: "w-full bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md px-4 py-3 focus:outline-none focus:border-blue-500" %>
+      </div>
+
+      <div>
         <%= f.label :description, "Description (optional)", class: "block text-sm text-slate-400 mb-1" %>
         <%= f.text_area :description, rows: 3,
             class: "w-full bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md px-4 py-3 focus:outline-none focus:border-blue-500 resize-none" %>

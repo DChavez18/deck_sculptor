@@ -1,0 +1,7 @@
+<%# locals: deck, next_page %>
+<div id="load-more-btn" class="text-center mt-6">
+  <%= link_to "Load more suggestions",
+      more_suggestions_deck_path(deck, page: next_page),
+      data: { turbo_stream: true },
+      class: "bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-colors" %>
+</div>

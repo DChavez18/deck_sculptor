@@ -1,5 +1,5 @@
 class DecksController < ApplicationController
-  before_action :set_deck, only: [ :show, :edit, :update, :destroy, :suggestions, :analysis, :intent, :save_intent ]
+  before_action :set_deck, only: [ :show, :edit, :update, :destroy, :suggestions, :more_suggestions, :analysis, :intent, :save_intent ]
 
   def index
     @decks = Deck.includes(:commander).order(created_at: :desc)
@@ -52,9 +52,49 @@ class DecksController < ApplicationController
   end
 
   def suggestions
-    @suggestions = SuggestionEngine.new(@deck).suggestions
-    @edhrec_top  = EdhrecService.new.top_cards(@deck.commander.name)
-    @feedbacks   = @deck.suggestion_feedbacks.index_by(&:scryfall_id)
+    commander_suggestions = SuggestionEngine.new(@deck).suggestions
+    intent_suggestions    = IntentEngine.new(@deck).suggestions
+
+    @suggestions = merge_suggestions(commander_suggestions, intent_suggestions)
+      .reject { |s| blacklisted?(s, @deck) }
+
+    @displayed_suggestions = @suggestions.first(30)
+    @edhrec_top            = EdhrecService.new.top_cards(@deck.commander.name)
+    @feedbacks             = @deck.suggestion_feedbacks.index_by(&:scryfall_id)
+  end
+
+  def more_suggestions
+    commander_suggestions = SuggestionEngine.new(@deck).suggestions
+    intent_suggestions    = IntentEngine.new(@deck).suggestions
+
+    all_suggestions = merge_suggestions(commander_suggestions, intent_suggestions)
+      .reject { |s| blacklisted?(s, @deck) }
+
+    page  = [ params[:page].to_i, 1 ].max
+    start = (page - 1) * 30
+    batch = all_suggestions[start, 30] || []
+
+    feedbacks_by_id = @deck.suggestion_feedbacks.index_by(&:scryfall_id)
+
+    streams = batch.map do |suggestion|
+      turbo_stream.append(
+        "suggestions-grid",
+        partial: "decks/suggestion_card",
+        locals:  { suggestion: suggestion, deck: @deck, feedbacks: feedbacks_by_id }
+      )
+    end
+
+    if all_suggestions.size > start + 30
+      streams << turbo_stream.replace(
+        "load-more-btn",
+        partial: "decks/load_more_button",
+        locals:  { deck: @deck, next_page: page + 1 }
+      )
+    else
+      streams << turbo_stream.remove("load-more-btn")
+    end
+
+    render turbo_stream: streams
   end
 
   def analysis
@@ -80,6 +120,10 @@ class DecksController < ApplicationController
   end
 
   private
+
+  def merge_suggestions(commander, intent)
+    MergeSuggestions.new(commander, intent).call
+  end
 
   def set_deck
     @deck = Deck.includes(:commander, :deck_cards).find(params[:id])

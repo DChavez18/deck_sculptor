@@ -8,6 +8,7 @@ Rails.application.routes.draw do
     resources :suggestion_feedbacks, only: [ :create ]
     member do
       get  :suggestions
+      get  :more_suggestions
       get  :analysis
       get  :intent
       post :save_intent

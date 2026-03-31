@@ -23,7 +23,7 @@ class ScryfallService
   end
 
   def search_cards(query)
-    response = get_request("/cards/search", q: query)
+    response = get_request("/cards/search", q: "#{query} -is:digital game:paper")
     parse_list_response(response)
   end
 
@@ -55,6 +55,24 @@ class ScryfallService
     query = build_color_identity_query(colors, options)
     response = get_request("/cards/search", q: query)
     parse_list_response(response)
+  end
+
+  def cards_by_function(tag, color_identity, options = {})
+    cache_key = "otag_#{tag}_#{color_identity.sort.join.downcase}"
+    cache_key += "_#{options[:budget]}" if options[:budget]
+
+    cached = CardCache.fetch(cache_key)
+    return cached if cached
+
+    color_string = color_identity.empty? ? "c" : color_identity.map(&:downcase).sort.join
+    parts = [ "oracletag:#{tag}", "id<=#{color_string}", "legal:commander", "-is:digital", "game:paper" ]
+    parts << "usd<=#{options[:budget]}" if options[:budget]
+
+    response = get_request("/cards/search", q: parts.join(" "))
+    result   = parse_list_response(response)
+
+    CardCache.store(cache_key, cache_key, result) unless result.empty?
+    result
   end
 
   def commander_suggestions(commander_card)
@@ -100,7 +118,7 @@ class ScryfallService
 
   def build_color_identity_query(colors, options)
     color_string = colors.sort.join
-    parts = [ "id<=#{color_string}" ]
+    parts = [ "id<=#{color_string}", "legal:commander", "-is:digital", "game:paper" ]
     parts << "t:#{options[:type]}" if options[:type]
     options[:exclude_ids]&.each { |id| parts << "-id:#{id}" }
     parts.join(" ")
@@ -110,6 +128,7 @@ class ScryfallService
     color_string = colors.sort.join
     parts = [ "id<=#{color_string}" ]
     parts << "o:#{keywords.first}" if keywords.any?
+    parts += [ "legal:commander", "-is:digital", "game:paper" ]
     parts.join(" ")
   end
 end

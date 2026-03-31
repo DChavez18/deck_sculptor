@@ -38,10 +38,11 @@ Named after Jace, the Mind Sculptor.
 - Phase 5 complete and merged — strategy analysis, archetype detection, color gap analysis
 - Phase 6 complete and merged — commander profile, EDHREC integration, combo synergy
 - Phase 7 complete and merged — smarter suggestions, EDHREC fix, intent questionnaire, edit/delete
-- Phase 8 complete — flip card UI, thumbs up/down feedback, more-like-this suggestions
-- 285 examples, 0 failures
+- Phase 8 complete and merged — flip card UI, thumbs up/down feedback, more-like-this suggestions
+- Phase 9 in progress — intent-driven suggestions, Scryfall oracle tags, editable deck attributes
+- 329 examples, 0 failures
 - CI green
-- Currently on branch: `phase-8-suggestions-ux`
+- Currently on branch: `phase-9-intent-suggestions`
 
 ## What was built in Phase 2
 - app/services/scryfall_service.rb — search_commander, find_commander,
@@ -70,9 +71,9 @@ Named after Jace, the Mind Sculptor.
 
 ## What was fixed in Phase 4 hotfix
 - Commander select button now writes Scryfall UUID to a hidden input via Stimulus
-- Removed empty <select> dropdown — Commander.find_or_create_from_scryfall()
+- Removed empty select dropdown — Commander.find_or_create_from_scryfall()
   upserts the record at deck creation time using ScryfallService
-- Renamed power_level → bracket_level (1–5 scale) via migration
+- Renamed power_level to bracket_level (1-5 scale) via migration
 - Deck::BRACKET_LEVELS constant, validation, views, factory, and specs all updated
 
 ## What was fixed in Phase 4 hotfix-2
@@ -93,7 +94,7 @@ Named after Jace, the Mind Sculptor.
   archetype's card types
 - analysis view — strategy panel with archetype badge, key themes, summary,
   color gap warnings
-- Card quantity adjustment — +/− controls, basic land detection, PATCH endpoint
+- Card quantity adjustment — plus/minus controls, basic land detection, PATCH endpoint
 - Turbo Stream quantity updates — in-place update of stats and card list, no scroll jump
 - Auto-submit card search — selecting from dropdown immediately adds card to deck
 - Collapsible category sections — chevron toggle, space-y-4 gap between groups
@@ -112,8 +113,8 @@ Named after Jace, the Mind Sculptor.
 ## What was built in Phase 7
 - Fixed EDHREC integration — data now read from container/json_dict/cardlists,
   merging highsynergycards, topcards, gamechangers lists
-- Tiered EDHREC synergy scoring — +3 "High synergy staple" (≥0.3), +2
-  "Commander staple" (≥0.1), +1 "Popular pick" (>0)
+- Tiered EDHREC synergy scoring — +3 "High synergy staple" (>=0.3), +2
+  "Commander staple" (>=0.1), +1 "Popular pick" (>0)
 - EdhrecService#commander_themes — pulls theme tags from EDHREC panels
 - Commander profile — EDHREC theme tags shown as pill badges
 - RatioAnalyzer — card type ratio targets vs actuals with cut suggestions
@@ -126,13 +127,6 @@ Named after Jace, the Mind Sculptor.
   capped at +4, with "Matches your theme: X" reason tags
 - Fixed commander pre-selection bug — hidden input moved inside form
 
-## Models overview
-- Commander — Scryfall card data for the chosen commander
-- Deck — belongs to commander, holds 99 DeckCards; has win_condition, budget,
-  themes, intent_completed fields
-- DeckCard — a card in a deck with category, cmc, color_identity (string)
-- CardCache — local Scryfall response cache, 7-day TTL
-
 ## What was built in Phase 8
 - SuggestionFeedback model — deck_id, scryfall_id, card_name, feedback (up/down),
   unique index on [deck_id, scryfall_id], belongs_to :deck
@@ -141,18 +135,38 @@ Named after Jace, the Mind Sculptor.
 - SuggestionEngine#more_like — fetches liked cards from CardCache, extracts shared
   keyword/type/CMC signals, scores candidates against signals, returns top 3 not
   already in deck or already given feedback
-- card_flip_controller.js — Stimulus controller toggling .is-flipped class + stopPropagation
+- card_flip_controller.js — Stimulus controller toggling .is-flipped class +
+  stopPropagation; front face shows full card art uncropped at natural aspect ratio
+- card_text_controller.js — expand/collapse with stopPropagation so show more/less
+  does not trigger card flip
+- thumb_controller.js — optimistic client-side thumbs highlight on click; thumbs
+  down optimistically removes card from DOM before Turbo Stream confirm
 - 3D CSS card flip — perspective wrapper, preserve-3d inner, backface-visibility,
-  .is-flipped rotates 180deg on Y axis, transition 0.4s
-- _suggestion_card.html.erb partial — front face (full art + overlays) / back face
-  (stats, oracle text, Add to Deck, thumbs SVG buttons); cards without image skip
-  flip and show back face only; all cards fixed at 420px height
-- Suggestions view now renders the partial, wraps grid in id="suggestions-grid"
-  for Turbo Stream targeting; filter bar and search still work
-- Thumbs highlighted green (up) or red (down) when feedback already saved
+  .is-flipped rotates 180deg on Y axis, transition 0.4s; front face uses
+  position relative to drive natural height, back face position absolute overlays
+- _suggestion_card.html.erb partial — front face (full art only, no overlays) /
+  back face (score badge, reason tags, oracle text with show more/less, Add to
+  Deck, thumbs SVG buttons); cards without image skip flip and show back face only
+- Suggestions view wraps grid in id="suggestions-grid" for Turbo Stream targeting
+- Thumbs highlighted green (up) or red (down) when feedback already saved for deck
+- 285 examples, 0 failures
+
+## Models overview
+- Commander — Scryfall card data for the chosen commander
+- Deck — belongs to commander, holds 99 DeckCards; has win_condition, budget,
+  playstyle, themes, intent_completed, bracket_level fields
+- DeckCard — a card in a deck with category, cmc, color_identity (string)
+- CardCache — local Scryfall response cache, 7-day TTL
+- SuggestionFeedback — per-deck per-card thumbs up/down signal, unique on
+  [deck_id, scryfall_id]
 
 ## Upcoming phases
-- Phase 9: Deployment to Railway
+- Phase 9: Intent-driven suggestions, Scryfall oracle tags, editable deck attributes
+- Phase 10: AI deck advisor chat (Claude API)
+- Phase 11: Deployment to Railway
 
 ## Current task
-Phase 8 complete — commit, push phase-8-suggestions-ux, PR into main.
+Phase 9 in progress — IntentEngine service driving suggestions from deck intent
+(win condition, budget, playstyle, themes), ScryfallService#cards_by_function
+using Scryfall oracle tags (oracletag:ramp, oracletag:removal, oracletag:draw-card
+etc), editable deck attributes on show page, intent summary panel on suggestions page.

@@ -1,4 +1,15 @@
-<%# locals: suggestion (hash: card/score/reasons), deck, feedbacks (hash scryfall_id => SuggestionFeedback) %>
+<%# locals: suggestion (hash: card/score/reasons/pool), deck, feedbacks (hash scryfall_id => SuggestionFeedback) %>
+<% pool_colors = {
+  "Ramp"               => "bg-green-700 text-green-100",
+  "Card Draw"          => "bg-blue-700 text-blue-100",
+  "Removal"            => "bg-red-700 text-red-100",
+  "Board Wipes"        => "bg-orange-700 text-orange-100",
+  "Win Condition"      => "bg-purple-700 text-purple-100",
+  "Combo"              => "bg-yellow-700 text-yellow-100",
+  "Theme"              => "bg-teal-700 text-teal-100",
+  "Commander Synergy"  => "bg-slate-600 text-slate-200",
+  "Staple"             => "bg-gray-600 text-gray-200"
+} %>
 <% card        = suggestion[:card] %>
 <% image_url   = card.dig("image_uris", "normal") || card.dig("card_faces", 0, "image_uris", "normal") %>
 <% flippable   = image_url.present? %>
@@ -9,9 +20,13 @@
 <%# Back-face content shared by flip and no-image variants %>
 <% back_content = capture do %>
   <div class="p-4 flex flex-col h-full">
-    <%# Score + reason badges %>
+    <%# Score + pool + reason badges %>
     <div class="flex flex-wrap gap-1 mb-2 shrink-0">
       <span class="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">Score: <%= suggestion[:score] %></span>
+      <% if suggestion[:pool].present? %>
+        <% pool_css = pool_colors.fetch(suggestion[:pool], "bg-slate-600 text-slate-200") %>
+        <span class="<%= pool_css %> text-xs font-medium px-2 py-0.5 rounded-full"><%= suggestion[:pool] %></span>
+      <% end %>
       <% suggestion[:reasons].each do |reason| %>
         <span class="bg-slate-700 text-slate-300 text-xs px-2 py-0.5 rounded-full"><%= reason %></span>
       <% end %>
@@ -44,6 +59,7 @@
       <%= form_with url: deck_deck_cards_path(deck), method: :post do |f| %>
         <%= hidden_field_tag "deck_card[scryfall_id]", card["id"] %>
         <%= hidden_field_tag "deck_card[card_name]",   card["name"] %>
+        <%= hidden_field_tag "deck_card[return_to]",   "suggestions" %>
         <button type="submit"
                 class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium px-3 py-1.5 rounded-md cursor-pointer transition-colors">
           Add to Deck

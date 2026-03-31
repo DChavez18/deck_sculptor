@@ -4,6 +4,7 @@ class DeckCardsController < ApplicationController
   def create
     scryfall_id = deck_card_params[:scryfall_id]
     card_name   = deck_card_params[:card_name]
+    return_to   = deck_card_params[:return_to]
     service     = ScryfallService.new
 
     card_data = if scryfall_id.present?
@@ -19,7 +20,7 @@ class DeckCardsController < ApplicationController
 
     category   = CardCategorizer.new(card_data).category
     @deck_card = @deck.deck_cards.build(
-      deck_card_params.merge(
+      deck_card_params.except("return_to").merge(
         scryfall_id:    card_data["id"],
         card_name:      card_data["name"],
         category:       category,
@@ -34,7 +35,18 @@ class DeckCardsController < ApplicationController
     )
 
     if @deck_card.save
-      redirect_to @deck, notice: "#{@deck_card.card_name} added to deck."
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.remove("suggestion-#{card_data['id']}")
+        end
+        format.html do
+          if return_to == "suggestions"
+            redirect_to suggestions_deck_path(@deck), notice: "#{@deck_card.card_name} added to deck."
+          else
+            redirect_to @deck, notice: "#{@deck_card.card_name} added to deck."
+          end
+        end
+      end
     else
       redirect_to @deck, alert: @deck_card.errors.full_messages.to_sentence
     end
@@ -76,6 +88,6 @@ class DeckCardsController < ApplicationController
   end
 
   def deck_card_params
-    params.require(:deck_card).permit(:scryfall_id, :card_name, :quantity)
+    params.require(:deck_card).permit(:scryfall_id, :card_name, :quantity, :return_to)
   end
 end

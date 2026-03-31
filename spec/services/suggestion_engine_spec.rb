@@ -52,7 +52,8 @@ RSpec.describe SuggestionEngine do
     }
   end
 
-  let(:combo_service) { instance_double(ComboFinderService) }
+  let(:combo_service)     { instance_double(ComboFinderService) }
+  let(:cognition_service) { instance_double(CardCognitionService) }
 
   before do
     allow(ScryfallService).to receive(:new).and_return(scryfall_service)
@@ -63,6 +64,8 @@ RSpec.describe SuggestionEngine do
     allow(edhrec_service).to receive(:top_cards_with_details).and_return([])
     allow(ComboFinderService).to receive(:new).and_return(combo_service)
     allow(combo_service).to receive(:find_combos).and_return([])
+    allow(CardCognitionService).to receive(:new).and_return(cognition_service)
+    allow(cognition_service).to receive(:suggestions).and_return([])
   end
 
   describe "#suggestions" do
@@ -90,6 +93,54 @@ RSpec.describe SuggestionEngine do
       results = engine.suggestions
       names = results.map { |r| r[:card]["name"] }
       expect(names).not_to include("Angel of Mercy")
+    end
+
+    it "excludes the commander card from suggestions" do
+      commander_as_card = {
+        "id"             => commander.scryfall_id,
+        "name"           => commander.name,
+        "type_line"      => "Legendary Creature — Human Wizard",
+        "cmc"            => 4.0,
+        "color_identity" => [ "W", "U" ],
+        "keywords"       => [ "Flying" ],
+        "oracle_text"    => ""
+      }
+      allow(scryfall_service).to receive(:commander_suggestions)
+        .and_return([ commander_as_card, flying_creature ])
+      results = engine.suggestions
+      ids = results.map { |r| r[:card]["id"] }
+      expect(ids).not_to include(commander.scryfall_id)
+    end
+
+    it "excludes the commander card from suggestions when matched by name" do
+      commander_as_card = {
+        "id"             => "some-other-id",
+        "name"           => commander.name,
+        "type_line"      => "Legendary Creature — Human Wizard",
+        "cmc"            => 4.0,
+        "color_identity" => [ "W", "U" ],
+        "keywords"       => [],
+        "oracle_text"    => ""
+      }
+      allow(scryfall_service).to receive(:commander_suggestions)
+        .and_return([ commander_as_card, flying_creature ])
+      results = engine.suggestions
+      names = results.map { |r| r[:card]["name"] }
+      expect(names).not_to include(commander.name)
+    end
+
+    it "never returns a card that has an existing SuggestionFeedback (thumbs down) for the deck" do
+      create(:suggestion_feedback, deck: deck, scryfall_id: "card-flying",
+             card_name: "Angel of Mercy", feedback: "down")
+      ids = engine.suggestions.map { |r| r[:card]["id"] }
+      expect(ids).not_to include("card-flying")
+    end
+
+    it "never returns a card that has an existing SuggestionFeedback (thumbs up) for the deck" do
+      create(:suggestion_feedback, deck: deck, scryfall_id: "card-flying",
+             card_name: "Angel of Mercy", feedback: "up")
+      ids = engine.suggestions.map { |r| r[:card]["id"] }
+      expect(ids).not_to include("card-flying")
     end
 
     it "merges suggestions from commander_suggestions and cards_by_color_identity" do
@@ -505,6 +556,99 @@ RSpec.describe SuggestionEngine do
           result = engine.suggestions.find { |r| r[:card]["id"] == "card-token" }
           expect(result[:reasons]).not_to include(a_string_matching(/Matches your theme/))
         end
+      end
+    end
+
+    describe "+2 liked_ids synergy boost" do
+      let(:liked_card) do
+        { "id" => "liked-1", "name" => "Liked Artifact", "type_line" => "Artifact",
+          "cmc" => 2.0, "keywords" => [ "Flying" ], "oracle_text" => "" }
+      end
+
+      let(:matching_card) do
+        { "id"             => "card-match",
+          "name"           => "Matching Artifact",
+          "type_line"      => "Artifact",
+          "cmc"            => 2.0,
+          "color_identity" => [ "U" ],
+          "keywords"       => [ "Flying" ],
+          "oracle_text"    => "" }
+      end
+
+      before do
+        CardCache.store("liked-1", "Liked Artifact", liked_card)
+        allow(scryfall_service).to receive(:commander_suggestions).and_return([ matching_card ])
+      end
+
+      context "when liked_ids are provided" do
+        subject(:engine) { described_class.new(deck, liked_ids: [ "liked-1" ]) }
+
+        it "adds +2 to cards sharing liked keywords" do
+          result = engine.suggestions.find { |r| r[:card]["id"] == "card-match" }
+          expect(result[:score]).to be >= 2
+          expect(result[:reasons]).to include("Synergizes with your picks")
+        end
+      end
+
+      context "when liked_ids is empty (default)" do
+        it "does not apply the synergy boost" do
+          result = engine.suggestions.find { |r| r[:card]["id"] == "card-match" }
+          expect(result[:reasons]).not_to include("Synergizes with your picks")
+        end
+      end
+    end
+
+    describe "CardCognition synergy boost" do
+      let(:high_synergy_card) do
+        {
+          "id"             => "card-cognition-high",
+          "name"           => "Deepglow Skate",
+          "type_line"      => "Creature — Fish",
+          "cmc"            => 5.0,
+          "color_identity" => [ "U" ],
+          "keywords"       => [],
+          "oracle_text"    => "When Deepglow Skate enters the battlefield, double the number of each kind of counter on any number of target permanents."
+        }
+      end
+
+      let(:moderate_synergy_card) do
+        {
+          "id"             => "card-cognition-mid",
+          "name"           => "Inexorable Tide",
+          "type_line"      => "Enchantment",
+          "cmc"            => 5.0,
+          "color_identity" => [ "U" ],
+          "keywords"       => [],
+          "oracle_text"    => "Whenever you cast a spell, proliferate."
+        }
+      end
+
+      before do
+        allow(cognition_service).to receive(:suggestions).and_return([
+          { "name" => "Deepglow Skate", "score" => 0.75, "scryfall_id" => "card-cognition-high" },
+          { "name" => "Inexorable Tide", "score" => 0.30, "scryfall_id" => "card-cognition-mid" }
+        ])
+        allow(scryfall_service).to receive(:find_card_by_name).with("Deepglow Skate").and_return(high_synergy_card)
+        allow(scryfall_service).to receive(:find_card_by_name).with("Inexorable Tide").and_return(moderate_synergy_card)
+        allow(scryfall_service).to receive(:commander_suggestions).and_return([ high_synergy_card, moderate_synergy_card ])
+      end
+
+      it "awards +3 and 'High commander synergy' for score >= 0.5" do
+        result = engine.suggestions.find { |r| r[:card]["id"] == "card-cognition-high" }
+        expect(result[:score]).to be >= 3
+        expect(result[:reasons]).to include("High commander synergy")
+      end
+
+      it "awards +2 and 'Commander synergy' for score >= 0.2 but < 0.5" do
+        result = engine.suggestions.find { |r| r[:card]["id"] == "card-cognition-mid" }
+        expect(result[:score]).to be >= 2
+        expect(result[:reasons]).to include("Commander synergy")
+      end
+
+      it "excludes CardCognition cards already in the deck" do
+        create(:deck_card, deck: deck, scryfall_id: "card-cognition-high", card_name: "Deepglow Skate")
+        ids = engine.suggestions.map { |r| r[:card]["id"] }
+        expect(ids).not_to include("card-cognition-high")
       end
     end
 
