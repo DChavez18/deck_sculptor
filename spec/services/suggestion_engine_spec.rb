@@ -129,18 +129,17 @@ RSpec.describe SuggestionEngine do
       expect(names).not_to include(commander.name)
     end
 
-    it "never returns a card that has an existing SuggestionFeedback (thumbs down) for the deck" do
-      create(:suggestion_feedback, deck: deck, scryfall_id: "card-flying",
-             card_name: "Angel of Mercy", feedback: "down")
+    it "excludes cards in deck.blacklisted_card_ids (thumbs down)" do
+      deck.blacklist_card("card-flying")
       ids = engine.suggestions.map { |r| r[:card]["id"] }
       expect(ids).not_to include("card-flying")
     end
 
-    it "never returns a card that has an existing SuggestionFeedback (thumbs up) for the deck" do
+    it "does not exclude cards that have only thumbs-up feedback" do
       create(:suggestion_feedback, deck: deck, scryfall_id: "card-flying",
              card_name: "Angel of Mercy", feedback: "up")
       ids = engine.suggestions.map { |r| r[:card]["id"] }
-      expect(ids).not_to include("card-flying")
+      expect(ids).to include("card-flying")
     end
 
     it "merges suggestions from commander_suggestions and cards_by_color_identity" do

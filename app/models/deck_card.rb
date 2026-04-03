@@ -1,5 +1,6 @@
 class DeckCard < ApplicationRecord
   belongs_to :deck
+  belongs_to :card, optional: true
 
   CATEGORIES = %w[
     creature enchantment artifact instant sorcery

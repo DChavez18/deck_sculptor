@@ -3,6 +3,7 @@ require "rails_helper"
 RSpec.describe SuggestionFeedback, type: :model do
   describe "associations" do
     it { should belong_to(:deck) }
+    it { should belong_to(:card).optional }
   end
 
   describe "validations" do

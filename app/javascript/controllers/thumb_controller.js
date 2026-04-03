@@ -11,7 +11,9 @@ export default class extends Controller {
   }
 
   thumbDown() {
-    const card = this.element.closest("[id^='suggestion-']")
-    if (card) card.remove()
+    this.downTarget.classList.remove("bg-slate-700", "hover:bg-red-700", "text-slate-300", "hover:text-white")
+    this.downTarget.classList.add("bg-red-600", "text-white")
+    this.upTarget.classList.remove("bg-green-600")
+    this.upTarget.classList.add("bg-slate-700", "text-slate-300")
   }
 }

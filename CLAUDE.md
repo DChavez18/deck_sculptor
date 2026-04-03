@@ -39,10 +39,41 @@ Named after Jace, the Mind Sculptor.
 - Phase 6 complete and merged — commander profile, EDHREC integration, combo synergy
 - Phase 7 complete and merged — smarter suggestions, EDHREC fix, intent questionnaire, edit/delete
 - Phase 8 complete and merged — flip card UI, thumbs up/down feedback, more-like-this suggestions
-- Phase 9 in progress — intent-driven suggestions, Scryfall oracle tags, editable deck attributes
-- 329 examples, 0 failures
+- Phase 9 complete and merged — intent-driven suggestions, Scryfall oracle tags, CardCognition, editable deck attributes
+- Phase 10 in progress — Card model, reliable feedback persistence, thumbs blacklist fix
+- 354 examples, 0 failures
 - CI green
-- Currently on branch: `phase-9-intent-suggestions`
+- Currently on branch: `phase-10-suggestions-fix`
+
+## What was built in Phase 9
+- IntentEngine service — builds suggestion pools from deck intent using Scryfall oracle tags
+  (oracletag:ramp, oracletag:removal, oracletag:draw-card, oracletag:boardwipe,
+  oracletag:counter-spell, oracletag:tutor, oracletag:token-generation,
+  oracletag:graveyard-recursion)
+- Win condition drives pools: combat → attack-trigger/combat-ramp, combo →
+  tutor/graveyard-recursion, control → counter-spell/removal/boardwipe,
+  tokens → token-generation, graveyard → graveyard-recursion
+- Budget filtering, playstyle score modifiers, theme keyword boosting with liked_ids
+  synergy boost
+- ScryfallService#cards_by_function — Scryfall oracle tag queries, all queries include
+  -is:digital game:paper legal:commander
+- CardCognitionService — free API at api.cardcognition.com, real-world commander synergy
+  scores from EDHREC data, +3 "High commander synergy" (>=0.5), +2 "Commander synergy"
+  (>=0.2), 7-day cache
+- MergeSuggestions — deduplicates both engines, keeps higher score, cap raised to 100
+- Pagination — 30 initially, Load More button appends next 30 via Turbo Stream
+- Editable deck attributes — win_condition, budget, playstyle, themes, bracket_level
+  editable from deck edit page
+- Intent summary panel on suggestions page — shows current intent with Edit Deck link
+- Centralised blacklisted? helper in ApplicationController — checks id, scryfall_id
+  fallback, name
+- SuggestionEngine and IntentEngine both filter feedbacked cards internally via
+  excluded_from_suggestions?
+- Thumbs up: saves feedback, re-scores with liked_ids, injects 3 similar cards
+- Thumbs down: removes card, injects 1 smart replacement using liked_ids
+- Add to Deck from suggestions: Turbo Stream removes card from grid, no redirect
+- Commander and deck cards excluded from suggestions by id and name
+- 354 examples, 0 failures
 
 ## What was built in Phase 2
 - app/services/scryfall_service.rb — search_commander, find_commander,
@@ -159,14 +190,15 @@ Named after Jace, the Mind Sculptor.
 - CardCache — local Scryfall response cache, 7-day TTL
 - SuggestionFeedback — per-deck per-card thumbs up/down signal, unique on
   [deck_id, scryfall_id]
+- Card — scryfall_id (unique), name, type_line, oracle_text, image_uri, cmc,
+  color_identity; find_or_create_from_scryfall, to_scryfall_hash (coming in Phase 10)
 
 ## Upcoming phases
-- Phase 9: Intent-driven suggestions, Scryfall oracle tags, editable deck attributes
-- Phase 10: AI deck advisor chat (Claude API)
-- Phase 11: Deployment to Railway
+- Phase 10: Card model, reliable feedback persistence, thumbs blacklist fix
+- Phase 11: AI deck advisor chat (Claude API)
+- Phase 12: Deployment to Railway
 
 ## Current task
-Phase 9 in progress — IntentEngine service driving suggestions from deck intent
-(win condition, budget, playstyle, themes), ScryfallService#cards_by_function
-using Scryfall oracle tags (oracletag:ramp, oracletag:removal, oracletag:draw-card
-etc), editable deck attributes on show page, intent summary panel on suggestions page.
+Phase 10 in progress — Card model as single source of truth for card identity,
+DeckCard and SuggestionFeedback migrated to reference Card by foreign key,
+blacklist rebuilt on card_id integer lookups for reliable thumbs-down persistence.

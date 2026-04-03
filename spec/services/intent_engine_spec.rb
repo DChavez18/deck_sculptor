@@ -271,9 +271,8 @@ RSpec.describe IntentEngine, type: :service do
       expect(results.map { |s| s[:card]["name"] }).not_to include(ramp_card["name"])
     end
 
-    it "excludes cards with existing feedback" do
-      create(:suggestion_feedback, deck: deck, scryfall_id: ramp_card["id"],
-             card_name: ramp_card["name"], feedback: "down")
+    it "excludes cards in deck.blacklisted_card_ids" do
+      deck.blacklist_card(ramp_card["id"])
       results = engine.suggestions
       expect(results.map { |s| s[:card]["id"] }).not_to include(ramp_card["id"])
     end

@@ -76,8 +76,7 @@ class SuggestionEngine
       card["name"].to_s.downcase == memo_commander_name ||
       memo_deck_ids.include?(card["id"]) ||
       memo_deck_names.include?(card["name"].to_s.downcase) ||
-      memo_feedbacked_ids.include?(card["id"]) ||
-      memo_feedbacked_ids.include?(card["scryfall_id"])
+      @deck.card_blacklisted?(card["id"].to_s)
   end
 
   def memo_commander_id
@@ -94,10 +93,6 @@ class SuggestionEngine
 
   def memo_deck_names
     @memo_deck_names ||= @deck.deck_cards.pluck(:card_name).map { |n| n.to_s.downcase }.to_set
-  end
-
-  def memo_feedbacked_ids
-    @memo_feedbacked_ids ||= @deck.suggestion_feedbacks.pluck(:scryfall_id).to_set
   end
 
   def fetch_edhrec_cards(service)

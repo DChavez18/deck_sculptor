@@ -70,4 +70,32 @@ RSpec.describe Deck, type: :model do
       expect(deck.mana_curve).to eq({ 1 => 2, 3 => 1 })
     end
   end
+
+  describe "#blacklist_card" do
+    it "adds the scryfall_id to blacklisted_card_ids" do
+      deck = create(:deck)
+      deck.blacklist_card("abc-123")
+      expect(deck.reload.blacklisted_card_ids).to include("abc-123")
+    end
+
+    it "does not add duplicates" do
+      deck = create(:deck)
+      deck.blacklist_card("abc-123")
+      deck.blacklist_card("abc-123")
+      expect(deck.reload.blacklisted_card_ids.count("abc-123")).to eq(1)
+    end
+  end
+
+  describe "#card_blacklisted?" do
+    it "returns true for a blacklisted scryfall_id" do
+      deck = create(:deck)
+      deck.blacklist_card("abc-123")
+      expect(deck.card_blacklisted?("abc-123")).to be true
+    end
+
+    it "returns false for a non-blacklisted scryfall_id" do
+      deck = create(:deck)
+      expect(deck.card_blacklisted?("not-blacklisted")).to be false
+    end
+  end
 end

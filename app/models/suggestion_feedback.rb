@@ -1,5 +1,6 @@
 class SuggestionFeedback < ApplicationRecord
   belongs_to :deck
+  belongs_to :card, optional: true
 
   FEEDBACK_VALUES = %w[up down].freeze
 

@@ -119,18 +119,19 @@ RSpec.describe "Decks", type: :request do
         allow(merge_instance).to receive(:call).and_return([ feedbacked_card ])
       end
 
-      it "excludes cards with 'down' feedback from the rendered page" do
+      it "excludes cards in deck.blacklisted_card_ids from the rendered page" do
         create(:suggestion_feedback, deck: deck, scryfall_id: "feedbacked-1",
                card_name: "Feedbacked Card", feedback: "down")
+        deck.blacklist_card("feedbacked-1")
         get suggestions_deck_path(deck)
         expect(response.body).not_to include("feedbacked-1")
       end
 
-      it "excludes cards with 'up' feedback from the rendered page" do
+      it "does not exclude cards with 'up' feedback from the rendered page" do
         create(:suggestion_feedback, deck: deck, scryfall_id: "feedbacked-1",
                card_name: "Feedbacked Card", feedback: "up")
         get suggestions_deck_path(deck)
-        expect(response.body).not_to include("feedbacked-1")
+        expect(response.body).to include("feedbacked-1")
       end
     end
 

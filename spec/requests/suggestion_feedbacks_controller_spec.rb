@@ -36,6 +36,10 @@ RSpec.describe "SuggestionFeedbacks", type: :request do
     allow(intent_engine).to receive(:suggestions).and_return([])
     allow(MergeSuggestions).to receive(:new).and_return(merge_suggestions)
     allow(merge_suggestions).to receive(:call).and_return([])
+    # Prevent real HTTP calls when card is not in CardCache
+    allow_any_instance_of(ScryfallService).to receive(:find_card_by_id).and_return(nil)
+    # Thumbs-down uses color identity search for fast replacement; return empty by default
+    allow_any_instance_of(ScryfallService).to receive(:cards_by_color_identity).and_return([])
   end
 
   describe "POST /decks/:deck_id/suggestion_feedbacks" do
@@ -50,6 +54,14 @@ RSpec.describe "SuggestionFeedbacks", type: :request do
         expect(SuggestionFeedback.last.feedback).to eq("down")
       end
 
+      it "adds the scryfall_id to deck.blacklisted_card_ids" do
+        post deck_suggestion_feedbacks_path(deck),
+          params: { scryfall_id: scryfall_id, card_name: card_name, feedback: "down" },
+          headers: turbo_headers
+
+        expect(deck.reload.blacklisted_card_ids).to include(scryfall_id)
+      end
+
       it "responds with a Turbo Stream remove targeting the card wrapper" do
         post deck_suggestion_feedbacks_path(deck),
           params: { scryfall_id: scryfall_id, card_name: card_name, feedback: "down" },
@@ -61,8 +73,22 @@ RSpec.describe "SuggestionFeedbacks", type: :request do
       end
 
       context "when a replacement card is available" do
+        let(:replacement_card_hash) do
+          {
+            "id"             => "new-card-1",
+            "name"           => "Thran Dynamo",
+            "type_line"      => "Artifact",
+            "cmc"            => 4.0,
+            "color_identity" => [],
+            "keywords"       => [],
+            "oracle_text"    => "{T}: Add {C}{C}{C}.",
+            "image_uris"     => {}
+          }
+        end
+
         before do
-          allow(merge_suggestions).to receive(:call).and_return([ new_card_suggestion ])
+          allow_any_instance_of(ScryfallService).to receive(:cards_by_color_identity)
+            .and_return([ replacement_card_hash ])
         end
 
         it "responds with both remove and append streams" do
@@ -75,21 +101,6 @@ RSpec.describe "SuggestionFeedbacks", type: :request do
           expect(response.body).to include("suggestion-#{scryfall_id}")
           expect(response.body).to include("append")
           expect(response.body).to include("suggestions-grid")
-        end
-
-        it "builds replacement using liked_ids from existing thumbs-up feedback" do
-          create(:suggestion_feedback, deck: deck, scryfall_id: "liked-card-1", feedback: "up")
-
-          expect(SuggestionEngine).to receive(:new).with(
-            deck, liked_ids: a_collection_containing_exactly("liked-card-1")
-          ).and_return(suggestion_engine)
-          expect(IntentEngine).to receive(:new).with(
-            deck, liked_ids: a_collection_containing_exactly("liked-card-1")
-          ).and_return(intent_engine)
-
-          post deck_suggestion_feedbacks_path(deck),
-            params: { scryfall_id: scryfall_id, card_name: card_name, feedback: "down" },
-            headers: turbo_headers
         end
       end
 
@@ -159,6 +170,7 @@ RSpec.describe "SuggestionFeedbacks", type: :request do
         }
         create(:suggestion_feedback, deck: deck, scryfall_id: "already-feedbacked",
                card_name: "Feedbacked Card", feedback: "down")
+        deck.blacklist_card("already-feedbacked")
         allow(merge_suggestions).to receive(:call).and_return([ thumbed_down_card ])
 
         post deck_suggestion_feedbacks_path(deck),
@@ -166,6 +178,38 @@ RSpec.describe "SuggestionFeedbacks", type: :request do
           headers: turbo_headers
 
         expect(response.body).not_to include("already-feedbacked")
+      end
+
+      it "does not append a feedbacked card even when a Card record exists but feedback.card_id is nil" do
+        # Regression: blacklisted? previously did Card.find_by early-return using card_id,
+        # which returned false when feedback.card_id was nil — skipping the scryfall_id check.
+        feedbacked_id = "card-with-record-but-nil-card-id"
+        create(:card, scryfall_id: feedbacked_id, name: "Previously Rejected Card")
+        create(:suggestion_feedback, deck: deck, scryfall_id: feedbacked_id,
+               card_name: "Previously Rejected Card", feedback: "down")
+        deck.blacklist_card(feedbacked_id)
+
+        rejected_card_suggestion = {
+          card: {
+            "id"             => feedbacked_id,
+            "name"           => "Previously Rejected Card",
+            "type_line"      => "Artifact",
+            "cmc"            => 3,
+            "color_identity" => [],
+            "keywords"       => [],
+            "oracle_text"    => "",
+            "image_uris"     => {}
+          },
+          score: 8,
+          reasons: []
+        }
+        allow(merge_suggestions).to receive(:call).and_return([ rejected_card_suggestion ])
+
+        post deck_suggestion_feedbacks_path(deck),
+          params: { scryfall_id: scryfall_id, card_name: card_name, feedback: "up" },
+          headers: turbo_headers
+
+        expect(response.body).not_to include(feedbacked_id)
       end
 
       it "does not append the commander card" do
@@ -250,6 +294,47 @@ RSpec.describe "SuggestionFeedbacks", type: :request do
         }.not_to change(SuggestionFeedback, :count)
 
         expect(existing.reload.feedback).to eq("down")
+      end
+    end
+
+    context "card record association" do
+      let(:card_hash) do
+        {
+          "id"             => scryfall_id,
+          "name"           => card_name,
+          "type_line"      => "Artifact",
+          "oracle_text"    => "{T}: Add {C}{C}.",
+          "image_uris"     => { "normal" => "https://cards.scryfall.io/normal/front/abc.jpg" },
+          "cmc"            => 1.0,
+          "color_identity" => []
+        }
+      end
+
+      before do
+        allow(CardCache).to receive(:fetch).with(scryfall_id).and_return(card_hash)
+      end
+
+      it "creates a Card record and sets card_id on the feedback" do
+        expect {
+          post deck_suggestion_feedbacks_path(deck),
+            params: { scryfall_id: scryfall_id, card_name: card_name, feedback: "up" },
+            headers: turbo_headers
+        }.to change(Card, :count).by(1)
+
+        feedback = SuggestionFeedback.find_by(scryfall_id: scryfall_id, deck: deck)
+        expect(feedback.card_id).to eq(Card.find_by(scryfall_id: scryfall_id).id)
+      end
+
+      it "does not create a duplicate Card on repeated feedback" do
+        post deck_suggestion_feedbacks_path(deck),
+          params: { scryfall_id: scryfall_id, card_name: card_name, feedback: "up" },
+          headers: turbo_headers
+
+        expect {
+          post deck_suggestion_feedbacks_path(deck),
+            params: { scryfall_id: scryfall_id, card_name: card_name, feedback: "down" },
+            headers: turbo_headers
+        }.not_to change(Card, :count)
       end
     end
   end
