@@ -46,7 +46,7 @@ class Deck < ApplicationRecord
 
   def blacklist_card(scryfall_id)
     return if blacklisted_card_ids.include?(scryfall_id)
-    update!(blacklisted_card_ids: blacklisted_card_ids + [scryfall_id])
+    update!(blacklisted_card_ids: blacklisted_card_ids + [ scryfall_id ])
   end
 
   def card_blacklisted?(scryfall_id)
