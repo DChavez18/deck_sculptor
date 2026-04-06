@@ -110,4 +110,64 @@ RSpec.describe ComboFinderService do
       end
     end
   end
+
+  describe "#near_miss_combos" do
+    # combo_response has 3 cards: Thrasios, Kenrith, Basalt Monolith
+    # deck has Thrasios + Kenrith → missing Basalt Monolith (one away)
+    let(:two_card_names) { [ commander_name, "Kenrith, the Returned King" ] }
+
+    context "when the deck has all but one combo card" do
+      before do
+        stub_request(:get, base_url)
+          .with(query: { "q" => "card:#{commander_name}" })
+          .to_return(status: 200, body: combo_response, headers: { "Content-Type" => "application/json" })
+      end
+
+      it "returns combos missing exactly one card" do
+        near_misses = service.near_miss_combos(two_card_names)
+        expect(near_misses).not_to be_empty
+        expect(near_misses.first[:missing_card]).to eq("Basalt Monolith")
+      end
+
+      it "includes the full combo details" do
+        near_miss = service.near_miss_combos(two_card_names).first
+        expect(near_miss[:combo][:cards]).to include("Thrasios, Triton Hero")
+        expect(near_miss[:combo][:result]).to include("Infinite Mana")
+      end
+    end
+
+    context "when the deck has all combo cards (complete combo)" do
+      before do
+        stub_request(:get, base_url)
+          .with(query: { "q" => "card:#{commander_name}" })
+          .to_return(status: 200, body: combo_response, headers: { "Content-Type" => "application/json" })
+      end
+
+      it "does not return complete combos" do
+        all_names = two_card_names + [ "Basalt Monolith" ]
+        near_misses = service.near_miss_combos(all_names)
+        expect(near_misses).to be_empty
+      end
+    end
+
+    context "on a network error" do
+      before do
+        stub_request(:get, base_url)
+          .with(query: { "q" => "card:#{commander_name}" })
+          .to_raise(StandardError.new("connection refused"))
+      end
+
+      it "returns an empty array" do
+        expect(service.near_miss_combos(two_card_names)).to eq([])
+      end
+    end
+
+    context "with an empty card names array" do
+      it "returns an empty array without making any HTTP requests" do
+        result = service.near_miss_combos([])
+        expect(result).to eq([])
+        expect(a_request(:get, base_url)).not_to have_been_made
+      end
+    end
+  end
 end

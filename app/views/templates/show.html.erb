@@ -1,0 +1,79 @@
+<div class="mb-6 flex items-center gap-4">
+  <%= link_to "← All Templates", templates_path, class: "text-slate-400 hover:text-white text-sm" %>
+</div>
+
+<div class="max-w-3xl">
+  <%# Header %>
+  <div class="mb-6">
+    <span class="text-xs font-medium text-blue-400 uppercase tracking-wide"><%= @template[:color_identity] %></span>
+    <h1 class="text-3xl font-bold text-white mt-1"><%= @template[:name] %></h1>
+    <p class="text-slate-400 mt-3 leading-relaxed"><%= @template[:description] %></p>
+  </div>
+
+  <%# Badges %>
+  <div class="flex flex-wrap gap-2 mb-8">
+    <span class="bg-blue-700 text-blue-100 text-sm px-3 py-1 rounded-full capitalize"><%= @template[:archetype] %></span>
+    <span class="bg-slate-700 text-slate-200 text-sm px-3 py-1 rounded-full">Bracket <%= @template[:bracket_level] %></span>
+    <span class="bg-slate-700 text-slate-200 text-sm px-3 py-1 rounded-full"><%= @template[:win_condition] %></span>
+  </div>
+
+  <%# Themes %>
+  <div class="mb-8 bg-slate-800 border border-slate-700 rounded-xl p-5">
+    <h2 class="text-white font-semibold mb-3">Key Themes</h2>
+    <div class="flex flex-wrap gap-1.5">
+      <% @template[:themes].split(",").map(&:strip).each do |theme| %>
+        <span class="bg-slate-700 text-slate-300 text-sm px-2.5 py-1 rounded-full"><%= theme %></span>
+      <% end %>
+    </div>
+  </div>
+
+  <%# Recommended card ratios %>
+  <div class="mb-8 bg-slate-800 border border-slate-700 rounded-xl p-5">
+    <h2 class="text-white font-semibold mb-4">Recommended Card Counts</h2>
+    <% total = @template[:recommended_card_count_by_category].values.sum.to_f %>
+    <div class="space-y-3">
+      <% @template[:recommended_card_count_by_category].each do |category, count| %>
+        <% pct = total > 0 ? (count / total * 100).round : 0 %>
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-slate-300 text-xs capitalize font-medium"><%= category.to_s.tr("_", " ") %></span>
+            <span class="text-slate-400 text-xs"><%= count %> cards</span>
+          </div>
+          <div class="bg-slate-700 rounded-full h-3 overflow-hidden">
+            <div class="bg-blue-500 h-3 rounded-full" style="width: <%= pct %>%"></div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%# Example commanders %>
+  <div class="mb-8 bg-slate-800 border border-slate-700 rounded-xl p-5">
+    <h2 class="text-white font-semibold mb-4">Example Commanders</h2>
+    <div class="space-y-3">
+      <% @template[:example_commanders].each do |commander| %>
+        <div class="flex items-start gap-3">
+          <span class="text-blue-400 mt-0.5 shrink-0">•</span>
+          <div>
+            <span class="text-white font-medium text-sm"><%= commander[:name] %></span>
+            <p class="text-slate-400 text-xs mt-0.5"><%= commander[:note] %></p>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%# CTA — Start a deck %>
+  <div class="bg-blue-900/30 border border-blue-700/50 rounded-xl p-6 text-center">
+    <h2 class="text-white font-semibold text-lg mb-2">Ready to build?</h2>
+    <p class="text-slate-400 text-sm mb-4">Start a new deck with this template's settings pre-filled.</p>
+    <%= link_to "Start a Deck with this Template",
+        new_deck_path(
+          archetype:     @template[:archetype],
+          win_condition: @template[:win_condition],
+          themes:        @template[:themes],
+          bracket_level: @template[:bracket_level]
+        ),
+        class: "inline-block bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-3 rounded-md transition-colors" %>
+  </div>
+</div>

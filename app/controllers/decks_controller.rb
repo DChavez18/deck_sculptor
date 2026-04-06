@@ -6,7 +6,12 @@ class DecksController < ApplicationController
   end
 
   def new
-    @deck = Deck.new
+    @deck = Deck.new(
+      archetype:     params[:archetype],
+      win_condition: params[:win_condition],
+      themes:        params[:themes],
+      bracket_level: params[:bracket_level]
+    )
     if params[:commander_id].present?
       @preselected_commander = Commander.find_by(id: params[:commander_id])
     end
@@ -101,10 +106,13 @@ class DecksController < ApplicationController
     @mana_curve        = @deck.mana_curve
     @cards_by_category = @deck.cards_by_category
     deck_card_names    = [ @deck.commander.name ] + @deck.deck_cards.pluck(:card_name)
-    @combos            = ComboFinderService.new.find_combos(deck_card_names)
+    combo_service      = ComboFinderService.new
+    @combos            = combo_service.find_combos(deck_card_names)
+    @near_miss_combos  = combo_service.near_miss_combos(deck_card_names)
     @strategy          = StrategyAnalyzer.new(@deck).report
     @ratio_report      = RatioAnalyzer.new(@deck).report
     @curve_advice      = CurveAdvisor.new(@deck).recommendations
+    @upgrades          = UpgradeFinder.new(@deck).upgrades
   end
 
   def intent

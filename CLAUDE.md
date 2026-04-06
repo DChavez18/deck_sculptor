@@ -40,10 +40,28 @@ Named after Jace, the Mind Sculptor.
 - Phase 7 complete and merged — smarter suggestions, EDHREC fix, intent questionnaire, edit/delete
 - Phase 8 complete and merged — flip card UI, thumbs up/down feedback, more-like-this suggestions
 - Phase 9 complete and merged — intent-driven suggestions, Scryfall oracle tags, CardCognition, editable deck attributes
-- Phase 10 in progress — Card model, reliable feedback persistence, thumbs blacklist fix
-- 354 examples, 0 failures
+- Phase 10 complete and merged — Card model, deck-level blacklist, reliable thumbs-down persistence
+- Phase 11 in progress — AI deck advisor chat (Claude API)
+- 375 examples, 0 failures
 - CI green
-- Currently on branch: `phase-10-suggestions-fix`
+- Currently on branch: `phase-11-ai-advisor`
+
+## What was built in Phase 10
+- Card model — scryfall_id (unique), name, type_line, oracle_text, image_uri,
+  cmc, color_identity; find_or_create_from_scryfall, to_scryfall_hash
+- DeckCard and SuggestionFeedback optionally belong_to :card via nullable card_id FK
+- blacklisted_card_ids PostgreSQL string array on Deck — blacklist_card(scryfall_id),
+  card_blacklisted?(scryfall_id)
+- Backfill migration copies existing thumbs-down scryfall_ids into the array
+- ApplicationController#blacklisted? simplified to use card_blacklisted? + deck cards + commander
+- SuggestionEngine and IntentEngine use deck.card_blacklisted? in excluded_from_suggestions?
+- SuggestionFeedbacksController: blacklist_card called FIRST on thumbs-down before any API calls,
+  fast cards_by_color_identity replacement (no slow engine pipeline)
+- thumb_controller.js: removed card.remove() from thumbDown() — card removal
+  now happens only via Turbo Stream response, not optimistic DOM removal
+- Root cause of all previous blacklist failures: thumbDown() was destroying
+  the form before Turbo could submit it
+- 375 examples, 0 failures
 
 ## What was built in Phase 9
 - IntentEngine service — builds suggestion pools from deck intent using Scryfall oracle tags
@@ -191,14 +209,13 @@ Named after Jace, the Mind Sculptor.
 - SuggestionFeedback — per-deck per-card thumbs up/down signal, unique on
   [deck_id, scryfall_id]
 - Card — scryfall_id (unique), name, type_line, oracle_text, image_uri, cmc,
-  color_identity; find_or_create_from_scryfall, to_scryfall_hash (coming in Phase 10)
+  color_identity; find_or_create_from_scryfall, to_scryfall_hash
 
 ## Upcoming phases
-- Phase 10: Card model, reliable feedback persistence, thumbs blacklist fix
 - Phase 11: AI deck advisor chat (Claude API)
 - Phase 12: Deployment to Railway
 
 ## Current task
-Phase 10 in progress — Card model as single source of truth for card identity,
-DeckCard and SuggestionFeedback migrated to reference Card by foreign key,
-blacklist rebuilt on card_id integer lookups for reliable thumbs-down persistence.
+Phase 11 in progress — AiAdvisorService calling Claude API with full deck
+context, DeckChat model for persistent history, collapsible chat panel on
+deck show page.

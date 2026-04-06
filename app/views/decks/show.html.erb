@@ -101,5 +101,43 @@
     <div id="deck_card_list">
       <%= render "deck_card_list", deck: @deck, cards_by_category: @cards_by_category %>
     </div>
+
+    <%# AI Advisor chat panel %>
+    <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden"
+         data-controller="ai-chat">
+
+      <%# Toggle header %>
+      <button type="button"
+              data-action="click->ai-chat#toggle"
+              class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-750 transition-colors">
+        <div class="flex items-center gap-2">
+          <span class="text-blue-400 font-semibold text-sm">AI Deck Advisor</span>
+          <span class="text-slate-500 text-xs">Powered by Claude</span>
+        </div>
+        <span class="text-slate-400 text-xs" data-ai-chat-target="toggleIcon">▼</span>
+      </button>
+
+      <%# Collapsible body — hidden by default %>
+      <div class="hidden border-t border-slate-700" data-ai-chat-target="panel">
+        <%# Chat history %>
+        <div id="chat-history"
+             data-ai-chat-target="history"
+             class="h-72 overflow-y-auto px-4 py-4 space-y-1 scroll-smooth">
+          <% @deck.deck_chats.order(:created_at).each do |chat| %>
+            <%= render "deck_chats/message", chat: chat %>
+          <% end %>
+          <% if @deck.deck_chats.none? %>
+            <p class="text-slate-500 text-xs text-center pt-8">
+              Ask me anything about your deck — cuts, additions, strategy, synergies.
+            </p>
+          <% end %>
+        </div>
+
+        <%# Input %>
+        <div class="px-4 pb-4">
+          <%= render "deck_chats/input", deck: @deck %>
+        </div>
+      </div>
+    </div>
   </div>
 </div>

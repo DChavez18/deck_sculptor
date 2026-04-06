@@ -107,6 +107,51 @@
   <% end %>
 </div>
 
+<%# Near-miss combos %>
+<% if @near_miss_combos.any? %>
+  <div class="mt-6 bg-slate-800 border border-slate-700 rounded-xl p-5">
+    <h2 class="text-white font-semibold mb-1">One Card Away</h2>
+    <p class="text-slate-400 text-sm mb-4">These combos are almost complete — add the missing card to unlock them.</p>
+    <div class="space-y-4">
+      <% @near_miss_combos.each do |nm| %>
+        <div class="border border-amber-700/40 bg-amber-500/5 rounded-lg p-4">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <%# Combo cards with presence indicator %>
+              <div class="flex flex-wrap gap-1.5 mb-2">
+                <% nm[:combo][:cards].each do |card_name| %>
+                  <% in_deck = @deck.deck_cards.any? { |dc| dc.card_name.casecmp?(card_name) } || @deck.commander.name.casecmp?(card_name) %>
+                  <span class="text-xs px-2 py-0.5 rounded-full font-medium <%= in_deck ? 'bg-slate-600 text-slate-300' : 'bg-amber-700/60 text-amber-200' %>">
+                    <%= card_name %><%= " ✓" if in_deck %>
+                  </span>
+                <% end %>
+              </div>
+
+              <% if nm[:combo][:result].present? %>
+                <p class="text-green-400 text-sm font-medium mb-1">⚡ <%= nm[:combo][:result] %></p>
+              <% end %>
+
+              <p class="text-amber-400 text-xs font-medium mt-1">
+                Missing: <span class="text-amber-200"><%= nm[:missing_card] %></span>
+              </p>
+
+              <% if nm[:combo][:steps].present? %>
+                <p class="text-slate-400 text-xs leading-relaxed mt-1 line-clamp-2"><%= nm[:combo][:steps] %></p>
+              <% end %>
+            </div>
+
+            <%# Add the missing card %>
+            <%= form_with url: deck_deck_cards_path(@deck), method: :post, class: "shrink-0" do |f| %>
+              <%= f.hidden_field :card_name, value: nm[:missing_card] %>
+              <%= f.submit "Add to Deck", name: nil,
+                  class: "bg-amber-700 hover:bg-amber-600 text-white text-xs font-medium px-3 py-1.5 rounded-md cursor-pointer transition-colors whitespace-nowrap" %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
 <%# Mana curve advice %>
 <% if @curve_advice.any? %>
   <div class="mb-6 bg-slate-800 border border-slate-700 rounded-xl p-5">
@@ -166,6 +211,46 @@
     <% end %>
   </div>
 </div>
+
+<%# Upgrade suggestions %>
+<% if @upgrades.any? %>
+  <div class="mt-6 bg-slate-800 border border-slate-700 rounded-xl p-5">
+    <h2 class="text-white font-semibold mb-4">Upgrade Suggestions</h2>
+    <p class="text-slate-400 text-sm mb-4">These cards in your deck have a clearly stronger replacement available.</p>
+    <div class="space-y-4">
+      <% @upgrades.each do |upgrade| %>
+        <div class="border border-slate-700 rounded-lg p-4">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <%# Current card %>
+            <div class="flex-1 min-w-0">
+              <p class="text-slate-400 text-xs mb-1">Currently in deck</p>
+              <p class="text-white font-medium text-sm"><%= upgrade[:current_card].card_name %></p>
+              <p class="text-slate-500 text-xs capitalize"><%= upgrade[:current_card].category %> · CMC <%= upgrade[:current_card].cmc.to_i %></p>
+            </div>
+
+            <span class="text-slate-500 text-xl shrink-0">→</span>
+
+            <%# Upgrade card %>
+            <div class="flex-1 min-w-0">
+              <p class="text-green-400 text-xs mb-1">Suggested upgrade</p>
+              <p class="text-white font-medium text-sm"><%= upgrade[:upgrade_card]["name"] %></p>
+              <p class="text-slate-500 text-xs capitalize">CMC <%= upgrade[:upgrade_card]["cmc"].to_i %></p>
+            </div>
+
+            <%# Add button %>
+            <%= form_with url: deck_deck_cards_path(@deck), method: :post, class: "shrink-0" do |f| %>
+              <%= f.hidden_field :scryfall_id, value: upgrade[:upgrade_card]["id"] %>
+              <%= f.hidden_field :card_name,   value: upgrade[:upgrade_card]["name"] %>
+              <%= f.submit "Add Upgrade", name: nil,
+                  class: "bg-green-700 hover:bg-green-600 text-white text-xs font-medium px-3 py-1.5 rounded-md cursor-pointer transition-colors" %>
+            <% end %>
+          </div>
+          <p class="text-slate-400 text-xs mt-3 italic"><%= upgrade[:reason] %></p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
 
 <%# Combos section %>
 <div class="mt-6 bg-slate-800 border border-slate-700 rounded-xl p-5">

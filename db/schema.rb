@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_04_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_06_220823) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -79,6 +79,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_04_000001) do
     t.index ["deck_id"], name: "index_deck_cards_on_deck_id"
   end
 
+  create_table "deck_chats", force: :cascade do |t|
+    t.text "content", null: false
+    t.datetime "created_at", null: false
+    t.bigint "deck_id", null: false
+    t.string "role", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deck_id"], name: "index_deck_chats_on_deck_id"
+  end
+
   create_table "decks", force: :cascade do |t|
     t.string "archetype"
     t.string "blacklisted_card_ids", default: [], array: true
@@ -110,6 +119,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_04_000001) do
 
   add_foreign_key "deck_cards", "cards"
   add_foreign_key "deck_cards", "decks"
+  add_foreign_key "deck_chats", "decks"
   add_foreign_key "decks", "commanders"
   add_foreign_key "suggestion_feedbacks", "cards"
   add_foreign_key "suggestion_feedbacks", "decks"

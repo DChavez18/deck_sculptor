@@ -2,6 +2,7 @@ class Deck < ApplicationRecord
   belongs_to :commander
   has_many   :deck_cards,          dependent: :destroy
   has_many   :suggestion_feedbacks, dependent: :destroy
+  has_many   :deck_chats,           dependent: :destroy
 
   ARCHETYPES     = %w[aggro combo control stax midrange goodstuff].freeze
   BRACKET_LEVELS = (1..5).to_a.freeze

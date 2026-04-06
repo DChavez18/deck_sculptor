@@ -6,6 +6,7 @@ Rails.application.routes.draw do
   resources :decks do
     resources :deck_cards,          only: [ :create, :update, :destroy ]
     resources :suggestion_feedbacks, only: [ :create ]
+    resources :deck_chats,           only: [ :create ]
     member do
       get  :suggestions
       get  :more_suggestions
@@ -26,4 +27,7 @@ Rails.application.routes.draw do
       get :search
     end
   end
+
+  get "/templates",           to: "templates#index", as: :templates
+  get "/templates/:archetype", to: "templates#show",  as: :template
 end

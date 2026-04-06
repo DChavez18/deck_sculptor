@@ -246,10 +246,11 @@ RSpec.describe "Decks", type: :request do
 
 
   describe "GET /decks/:id/analysis" do
-    let(:combo_service) { instance_double(ComboFinderService, find_combos: []) }
+    let(:combo_service) { instance_double(ComboFinderService, find_combos: [], near_miss_combos: []) }
 
     before do
       allow(ComboFinderService).to receive(:new).and_return(combo_service)
+      allow(UpgradeFinder).to receive(:new).and_return(instance_double(UpgradeFinder, upgrades: []))
       get analysis_deck_path(deck)
     end
 

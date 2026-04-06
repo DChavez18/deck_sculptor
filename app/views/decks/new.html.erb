@@ -53,6 +53,8 @@
     <%= form_with model: @deck, class: "space-y-4" do |f| %>
       <input type="hidden" name="deck[commander_scryfall_id]" id="deck_commander_scryfall_id"
              value="<%= @preselected_commander&.scryfall_id %>">
+      <%= f.hidden_field :win_condition %>
+      <%= f.hidden_field :themes %>
       <% if @deck.errors.any? %>
         <div class="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-md text-sm">
           <ul class="list-disc list-inside space-y-1">
