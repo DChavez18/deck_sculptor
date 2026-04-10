@@ -28,7 +28,7 @@ class Deck < ApplicationRecord
   end
 
   def cards_by_category
-    deck_cards.group_by(&:category)
+    deck_cards.sort_by(&:card_name).group_by(&:category)
   end
 
   def mana_curve

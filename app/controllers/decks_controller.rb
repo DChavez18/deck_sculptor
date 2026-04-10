@@ -38,6 +38,7 @@ class DecksController < ApplicationController
 
   def show
     @cards_by_category = @deck.cards_by_category
+    @ratio_report      = RatioAnalyzer.new(@deck).report
   end
 
   def edit

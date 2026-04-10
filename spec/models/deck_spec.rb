@@ -60,6 +60,19 @@ RSpec.describe Deck, type: :model do
     end
   end
 
+  describe "#cards_by_category" do
+    it "sorts cards alphabetically within each category" do
+      deck = create(:deck)
+      create(:deck_card, deck: deck, card_name: "Zeal of Ancestors", category: "instant")
+      create(:deck_card, deck: deck, card_name: "Aether Vial", category: "instant")
+      create(:deck_card, deck: deck, card_name: "Mox Diamond", category: "artifact")
+
+      result = deck.cards_by_category
+      expect(result["instant"].map(&:card_name)).to eq(%w[Aether\ Vial Zeal\ of\ Ancestors])
+      expect(result["artifact"].map(&:card_name)).to eq([ "Mox Diamond" ])
+    end
+  end
+
   describe "#mana_curve" do
     it "groups non-land cards by cmc" do
       deck = create(:deck)

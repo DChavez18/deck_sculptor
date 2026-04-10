@@ -4,7 +4,20 @@
     <p class="text-slate-500 text-sm mt-1">Use the form above to add cards to your deck.</p>
   </div>
 <% else %>
-  <div class="space-y-4">
+  <div data-controller="deck-sort">
+    <div class="flex justify-end gap-2 mb-3">
+      <button data-deck-sort-target="nameButton"
+              data-action="click->deck-sort#sortByName"
+              class="bg-blue-600 text-white text-xs px-3 py-1 rounded-md font-medium transition-colors">
+        A-Z
+      </button>
+      <button data-deck-sort-target="cmcButton"
+              data-action="click->deck-sort#sortByCmc"
+              class="bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded-md font-medium transition-colors">
+        CMC
+      </button>
+    </div>
+    <div class="space-y-4">
     <% cards_by_category.each_with_index do |(category, cards), idx| %>
       <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
         <div class="px-5 py-3 bg-slate-750 border-b border-slate-700 flex items-center justify-between cursor-pointer select-none"
@@ -17,7 +30,9 @@
         </div>
         <div class="category-body divide-y divide-slate-700">
           <% cards.each do |card| %>
-            <div class="px-4 py-2 flex items-center justify-between">
+            <div class="px-4 py-2 flex items-center justify-between"
+                 data-card-name="<%= card.card_name %>"
+                 data-card-cmc="<%= card.cmc || 0 %>">
               <div class="flex items-center gap-3">
                 <% if card.image_uri.present? %>
                   <img src="<%= card.image_uri&.gsub('/normal/', '/small/') %>" alt="<%= card.card_name %>"
@@ -50,5 +65,6 @@
         </div>
       </div>
     <% end %>
+    </div>
   </div>
 <% end %>

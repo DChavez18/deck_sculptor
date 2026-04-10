@@ -217,35 +217,60 @@
   <div class="mt-6 bg-slate-800 border border-slate-700 rounded-xl p-5">
     <h2 class="text-white font-semibold mb-4">Upgrade Suggestions</h2>
     <p class="text-slate-400 text-sm mb-4">These cards in your deck have a clearly stronger replacement available.</p>
-    <div class="space-y-4">
+    <div class="space-y-6">
       <% @upgrades.each do |upgrade| %>
         <div class="border border-slate-700 rounded-lg p-4">
-          <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <%# Card pair — centered, fixed-width cards %>
+          <div class="flex items-start justify-center gap-4 mb-4">
             <%# Current card %>
-            <div class="flex-1 min-w-0">
-              <p class="text-slate-400 text-xs mb-1">Currently in deck</p>
-              <p class="text-white font-medium text-sm"><%= upgrade[:current_card].card_name %></p>
-              <p class="text-slate-500 text-xs capitalize"><%= upgrade[:current_card].category %> · CMC <%= upgrade[:current_card].cmc.to_i %></p>
+            <% sid = upgrade[:current_card].scryfall_id %>
+            <% current_img = sid.present? ? "https://cards.scryfall.io/normal/front/#{sid[0]}/#{sid[1]}/#{sid}.jpg" : nil %>
+            <div class="flex flex-col items-center text-center w-[160px] shrink-0">
+              <% if current_img %>
+                <img src="<%= current_img %>" alt="<%= upgrade[:current_card].card_name %>"
+                     class="w-full rounded-lg object-contain border border-slate-600 mb-2">
+              <% else %>
+                <div class="w-full aspect-[2/3] rounded-lg bg-slate-700 border border-slate-600 mb-2"></div>
+              <% end %>
+              <p class="text-slate-400 text-xs mb-0.5">Currently in deck</p>
+              <p class="text-white font-medium text-sm leading-tight"><%= upgrade[:current_card].card_name %></p>
+              <p class="text-slate-500 text-xs capitalize mt-0.5"><%= upgrade[:current_card].category %> · CMC <%= upgrade[:current_card].cmc.to_i %></p>
             </div>
 
-            <span class="text-slate-500 text-xl shrink-0">→</span>
+            <%# Arrow %>
+            <div class="flex items-center justify-center pt-16 shrink-0">
+              <span class="text-slate-500 text-2xl">→</span>
+            </div>
 
             <%# Upgrade card %>
-            <div class="flex-1 min-w-0">
-              <p class="text-green-400 text-xs mb-1">Suggested upgrade</p>
-              <p class="text-white font-medium text-sm"><%= upgrade[:upgrade_card]["name"] %></p>
-              <p class="text-slate-500 text-xs capitalize">CMC <%= upgrade[:upgrade_card]["cmc"].to_i %></p>
+            <% upgrade_img = upgrade[:upgrade_card].dig("image_uris", "normal") || upgrade[:upgrade_card].dig("card_faces", 0, "image_uris", "normal") %>
+            <div class="flex flex-col items-center text-center w-[160px] shrink-0">
+              <% if upgrade_img %>
+                <img src="<%= upgrade_img %>" alt="<%= upgrade[:upgrade_card]["name"] %>"
+                     class="w-full rounded-lg object-contain border border-slate-600 mb-2">
+              <% else %>
+                <div class="w-full aspect-[2/3] rounded-lg bg-slate-700 border border-slate-600 mb-2"></div>
+              <% end %>
+              <p class="text-green-400 text-xs mb-0.5">Suggested upgrade</p>
+              <p class="text-white font-medium text-sm leading-tight"><%= upgrade[:upgrade_card]["name"] %></p>
+              <p class="text-slate-500 text-xs mt-0.5">CMC <%= upgrade[:upgrade_card]["cmc"].to_i %></p>
             </div>
+          </div>
 
-            <%# Add button %>
-            <%= form_with url: deck_deck_cards_path(@deck), method: :post, class: "shrink-0" do |f| %>
+          <%# Reason, oracle text, and Add button %>
+          <p class="text-slate-400 text-xs italic mb-2"><%= upgrade[:reason] %></p>
+          <% oracle = upgrade[:upgrade_card]["oracle_text"].to_s.truncate(150) %>
+          <% if oracle.present? %>
+            <p class="text-slate-500 text-xs leading-relaxed mb-3"><%= oracle %></p>
+          <% end %>
+          <div class="flex justify-end">
+            <%= form_with url: deck_deck_cards_path(@deck), method: :post do |f| %>
               <%= f.hidden_field :scryfall_id, value: upgrade[:upgrade_card]["id"] %>
               <%= f.hidden_field :card_name,   value: upgrade[:upgrade_card]["name"] %>
               <%= f.submit "Add Upgrade", name: nil,
-                  class: "bg-green-700 hover:bg-green-600 text-white text-xs font-medium px-3 py-1.5 rounded-md cursor-pointer transition-colors" %>
+                  class: "bg-green-700 hover:bg-green-600 text-white text-xs font-medium px-3 py-1.5 rounded-md cursor-pointer transition-colors whitespace-nowrap" %>
             <% end %>
           </div>
-          <p class="text-slate-400 text-xs mt-3 italic"><%= upgrade[:reason] %></p>
         </div>
       <% end %>
     </div>

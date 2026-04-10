@@ -135,6 +135,65 @@ RSpec.describe "Decks", type: :request do
       end
     end
 
+    context "with more than 30 suggestions" do
+      def make_suggestion(id, score)
+        { card: { "id"             => id,
+                  "name"           => "Card #{id}",
+                  "type_line"      => "Artifact",
+                  "cmc"            => 1,
+                  "color_identity" => [],
+                  "keywords"       => [],
+                  "oracle_text"    => "",
+                  "image_uris"     => {} },
+          score: score, reasons: [], pool: "Ramp" }
+      end
+
+      let(:many_suggestions) { (1..40).map { |i| make_suggestion("pag-#{i}", 41 - i) } }
+      let(:merge_instance)   { instance_double(MergeSuggestions, call: many_suggestions) }
+
+      before do
+        allow(MergeSuggestions).to receive(:new).and_return(merge_instance)
+        get suggestions_deck_path(deck)
+      end
+
+      it "renders only the first 30 suggestions" do
+        expect(response.body).to include("suggestion-pag-1")
+        expect(response.body).to include("suggestion-pag-30")
+        expect(response.body).not_to include("suggestion-pag-31")
+      end
+
+      it "shows the load more button" do
+        expect(response.body).to include("load-more-btn")
+        expect(response.body).to include("Load more")
+      end
+    end
+
+    context "with 30 or fewer suggestions" do
+      def make_suggestion(id, score)
+        { card: { "id"             => id,
+                  "name"           => "Card #{id}",
+                  "type_line"      => "Artifact",
+                  "cmc"            => 1,
+                  "color_identity" => [],
+                  "keywords"       => [],
+                  "oracle_text"    => "",
+                  "image_uris"     => {} },
+          score: score, reasons: [], pool: "Ramp" }
+      end
+
+      let(:few_suggestions) { (1..20).map { |i| make_suggestion("few-#{i}", 21 - i) } }
+      let(:merge_instance)  { instance_double(MergeSuggestions, call: few_suggestions) }
+
+      before do
+        allow(MergeSuggestions).to receive(:new).and_return(merge_instance)
+        get suggestions_deck_path(deck)
+      end
+
+      it "does not show the load more button" do
+        expect(response.body).not_to include("load-more-btn")
+      end
+    end
+
     context "when a card uses scryfall_id key instead of id" do
       let(:feedbacked_card_alt_key) do
         { card: { "scryfall_id"   => "feedbacked-alt",
