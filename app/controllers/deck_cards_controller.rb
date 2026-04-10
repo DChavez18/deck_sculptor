@@ -50,6 +50,15 @@ class DeckCardsController < ApplicationController
     else
       redirect_to @deck, alert: @deck_card.errors.full_messages.to_sentence
     end
+  rescue ActiveRecord::RecordNotUnique
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.remove("suggestion-#{card_data['id']}")
+      end
+      format.html do
+        redirect_to @deck, notice: "#{card_name} is already in your deck."
+      end
+    end
   end
 
   def update

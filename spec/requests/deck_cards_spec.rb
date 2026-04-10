@@ -133,6 +133,38 @@ RSpec.describe "DeckCards", type: :request do
         expect(response).to redirect_to(suggestions_deck_path(deck))
       end
     end
+
+    context "when the same card is added twice (duplicate)" do
+      before do
+        allow(scryfall_service).to receive(:find_card_by_id).with("scryfall-123").and_return(card_data)
+        create(:deck_card, deck: deck, scryfall_id: "scryfall-123", card_name: "Counterspell",
+               category: "instant", type_line: "Instant", cmc: 2.0, color_identity: "U")
+      end
+
+      let(:params) { { deck_card: { scryfall_id: "scryfall-123", card_name: "Counterspell", quantity: 1 } } }
+
+      it "does not raise a 500" do
+        post deck_deck_cards_path(deck), params: params
+        expect(response).not_to have_http_status(:internal_server_error)
+      end
+
+      it "redirects to the deck with an already-in-deck notice" do
+        post deck_deck_cards_path(deck), params: params
+        expect(response).to redirect_to(deck_path(deck))
+        follow_redirect!
+        expect(response.body).to include("already in your deck")
+      end
+
+      it "responds with a turbo stream remove via Turbo, no 500" do
+        post deck_deck_cards_path(deck),
+          params: params,
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+        expect(response).not_to have_http_status(:internal_server_error)
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        expect(response.body).to include("remove")
+        expect(response.body).to include("suggestion-scryfall-123")
+      end
+    end
   end
 
   describe "PATCH /decks/:deck_id/deck_cards/:id" do

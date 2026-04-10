@@ -22,12 +22,14 @@ export default class extends Controller {
   }
 
   select(event) {
+    clearTimeout(this._debounceTimer)
+
     const cardId = event.currentTarget.dataset.cardId
     const cardName = event.currentTarget.dataset.cardName
 
     this.scryfallIdTarget.value = cardId
     this.cardNameTarget.value = cardName
-    this.inputTarget.value = cardName
+    this.inputTarget.value = ""
 
     this.dropdownTarget.classList.add("hidden")
     this.dropdownTarget.innerHTML = ""
