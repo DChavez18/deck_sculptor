@@ -69,7 +69,7 @@ RSpec.describe Deck, type: :model do
 
       result = deck.cards_by_category
       expect(result["instant"].map(&:card_name)).to eq(%w[Aether\ Vial Zeal\ of\ Ancestors])
-      expect(result["artifact"].map(&:card_name)).to eq(["Mox Diamond"])
+      expect(result["artifact"].map(&:card_name)).to eq([ "Mox Diamond" ])
     end
   end
 
