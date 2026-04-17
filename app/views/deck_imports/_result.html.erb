@@ -1,0 +1,13 @@
+<div>
+  <p class="text-green-400 text-sm"><%= summary %></p>
+  <% if not_found.any? %>
+    <div class="mt-1">
+      <p class="text-red-400 text-xs">Cards not found:</p>
+      <ul class="text-red-400 text-xs list-none">
+        <% not_found.each do |name| %>
+          <li>• <%= name %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+</div>

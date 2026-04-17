@@ -57,6 +57,8 @@
             class: "bg-slate-700 hover:bg-slate-600 text-white text-sm px-4 py-2 rounded-md font-medium" %>
         <%= link_to "Edit Deck", edit_deck_path(@deck),
             class: "bg-slate-700 hover:bg-slate-600 text-white text-sm px-4 py-2 rounded-md font-medium" %>
+        <%= link_to "Export", export_deck_path(@deck),
+            class: "bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-medium px-4 py-2 rounded-md transition-colors" %>
       </div>
     </div>
 
@@ -131,6 +133,39 @@
         <input type="hidden" name="deck_card[card_name]"   data-card-search-target="cardName">
         <%= f.submit "Add Card", class: "hidden" %>
       <% end %>
+    </div>
+
+    <%# Import Decklist panel %>
+    <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden"
+         data-controller="deck-import">
+
+      <%# Toggle header %>
+      <button type="button"
+              data-action="click->deck-import#toggle"
+              class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-750 transition-colors">
+        <div class="flex items-center gap-2">
+          <span class="text-white font-semibold text-sm">Import Decklist</span>
+          <span class="text-slate-500 text-xs">Paste a plain text decklist</span>
+        </div>
+        <span class="text-slate-400 text-xs" data-deck-import-target="toggleIcon">▼</span>
+      </button>
+
+      <%# Collapsible body — hidden by default %>
+      <div class="hidden border-t border-slate-700 p-5" data-deck-import-target="panel">
+        <%= form_with url: deck_deck_imports_path(@deck), method: :post,
+                      data: { action: "submit->deck-import#submit turbo:submit-end->deck-import#submitEnd", turbo_stream: true } do |f| %>
+          <textarea name="decklist"
+                    rows="8"
+                    placeholder="1 Sol Ring&#10;1x Arcane Signet&#10;1 Command Tower (CMR) 281&#10;..."
+                    class="w-full bg-slate-700 border border-slate-600 text-white placeholder-slate-500 rounded-md px-4 py-3 text-sm font-mono focus:outline-none focus:border-blue-500 resize-y mb-3"></textarea>
+          <div class="flex items-center gap-3">
+            <%= f.submit "Import Cards",
+                data: { deck_import_target: "submitButton" },
+                class: "bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors cursor-pointer" %>
+            <div id="import-result"></div>
+          </div>
+        <% end %>
+      </div>
     </div>
 
     <%# Cards by category %>

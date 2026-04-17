@@ -1,5 +1,5 @@
 class DecksController < ApplicationController
-  before_action :set_deck, only: [ :show, :edit, :update, :destroy, :suggestions, :more_suggestions, :analysis, :intent, :save_intent ]
+  before_action :set_deck, only: [ :show, :edit, :update, :destroy, :suggestions, :more_suggestions, :analysis, :intent, :save_intent, :export ]
 
   def index
     @decks = Deck.includes(:commander).order(created_at: :desc)
@@ -114,6 +114,21 @@ class DecksController < ApplicationController
     @ratio_report      = RatioAnalyzer.new(@deck).report
     @curve_advice      = CurveAdvisor.new(@deck).recommendations
     @upgrades          = UpgradeFinder.new(@deck).upgrades
+  end
+
+  def export
+    cards = @deck.deck_cards.sort_by(&:card_name)
+    lines = []
+    lines << "Commander"
+    lines << "1 #{@deck.commander.name}"
+    lines << ""
+    lines << "Deck"
+    cards.each { |dc| lines << "1 #{dc.card_name}" }
+
+    send_data lines.join("\n"),
+              filename:    "#{@deck.name.parameterize}.txt",
+              type:        "text/plain",
+              disposition: "attachment"
   end
 
   def intent

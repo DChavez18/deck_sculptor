@@ -316,6 +316,35 @@ RSpec.describe "Decks", type: :request do
     it { expect(response).to have_http_status(:ok) }
   end
 
+  describe "GET /decks/:id/export" do
+    let!(:deck_card) { create(:deck_card, deck: deck, card_name: "Sol Ring", category: "artifact", type_line: "Artifact", cmc: 1.0, color_identity: "") }
+
+    before { get export_deck_path(deck) }
+
+    it { expect(response).to have_http_status(:ok) }
+
+    it "responds with text/plain content type" do
+      expect(response.content_type).to include("text/plain")
+    end
+
+    it "sends the file as an attachment" do
+      expect(response.headers["Content-Disposition"]).to include("attachment")
+    end
+
+    it "includes the commander name" do
+      expect(response.body).to include(deck.commander.name)
+    end
+
+    it "includes deck card names" do
+      expect(response.body).to include("Sol Ring")
+    end
+
+    it "includes section headers" do
+      expect(response.body).to include("Commander")
+      expect(response.body).to include("Deck")
+    end
+  end
+
   describe "GET /decks/:id/intent" do
     before { get intent_deck_path(deck) }
 

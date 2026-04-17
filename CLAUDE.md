@@ -41,10 +41,12 @@ Named after Jace, the Mind Sculptor.
 - Phase 8 complete and merged — flip card UI, thumbs up/down feedback, more-like-this suggestions
 - Phase 9 complete and merged — intent-driven suggestions, Scryfall oracle tags, CardCognition, editable deck attributes
 - Phase 10 complete and merged — Card model, deck-level blacklist, reliable thumbs-down persistence
-- Phase 11 in progress — AI deck advisor chat (Claude API)
-- 375 examples, 0 failures
+- Phase 11 complete and merged — AI deck advisor chat (Claude API), DeckChat model, MTG guardrails
+- Phase 12 complete and merged — UX polish, duplicate card guard, alphabetized card lists, Building Toward panel, load more fix
+- Phase 13 in progress — UpgradeFinder tuning, upgrade card images, continued polish
+- 421 examples, 0 failures
 - CI green
-- Currently on branch: `phase-11-ai-advisor`
+- Currently on branch: `phase-13-polish-continued`
 
 ## What was built in Phase 10
 - Card model — scryfall_id (unique), name, type_line, oracle_text, image_uri,
@@ -62,6 +64,33 @@ Named after Jace, the Mind Sculptor.
 - Root cause of all previous blacklist failures: thumbDown() was destroying
   the form before Turbo could submit it
 - 375 examples, 0 failures
+
+## What was built in Phase 12
+- Duplicate card guard — DeckCardsController#create rescues
+  ActiveRecord::RecordNotUnique and redirects with flash error instead
+  of crashing with a 500
+- Alphabetized card lists — Deck#cards_by_category sorts cards
+  alphabetically by card_name within each category
+- Building Toward panel — deck show page displays win condition, playstyle,
+  themes, and budget as progress/intent summary; only shown when intent
+  is filled in (intent_completed?)
+- Load more button fix — suggestions view only renders the Load More button
+  when the total suggestion count before pagination exceeds 30; previously
+  appeared incorrectly when fewer suggestions existed
+
+## What was built in Phase 11
+- AiAdvisorService — calls Claude API (claude-sonnet-4-20250514) with full
+  deck context: commander, cards by category, strategy summary, bracket
+  level, win condition, budget, playstyle, themes
+- DeckChat model — deck_id, role (user/assistant), content, persists
+  conversation history across page reloads
+- AI Deck Advisor collapsible panel on deck show page — chat input, message
+  history, streaming-style response display
+- MTG guardrails in system prompt — keeps advisor focused on Magic strategy,
+  rejects off-topic questions gracefully
+- DecksController#chat action — POST endpoint, calls AiAdvisorService,
+  persists both user message and assistant reply, responds with Turbo Stream
+- Anthropic API key stored in Rails credentials under anthropic.api_key
 
 ## What was built in Phase 9
 - IntentEngine service — builds suggestion pools from deck intent using Scryfall oracle tags
@@ -212,10 +241,11 @@ Named after Jace, the Mind Sculptor.
   color_identity; find_or_create_from_scryfall, to_scryfall_hash
 
 ## Upcoming phases
-- Phase 11: AI deck advisor chat (Claude API)
-- Phase 12: Deployment to Railway
+- Phase 13: UpgradeFinder scoring tuning, upgrade card images, polish
+- Phase 14: Deployment to Railway
 
 ## Current task
-Phase 11 in progress — AiAdvisorService calling Claude API with full deck
-context, DeckChat model for persistent history, collapsible chat panel on
-deck show page.
+Phase 13 in progress — fixing UpgradeFinder so it stops suggesting
+sidegrades (e.g. Rhystic Study → Mystic Barrier). Tuning the scoring
+to require functional similarity and meaningful power delta. Also adding
+card images to the upgrade suggestions layout on the analysis page.

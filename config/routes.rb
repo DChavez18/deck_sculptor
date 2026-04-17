@@ -7,12 +7,14 @@ Rails.application.routes.draw do
     resources :deck_cards,          only: [ :create, :update, :destroy ]
     resources :suggestion_feedbacks, only: [ :create ]
     resources :deck_chats,           only: [ :create ]
+    resources :deck_imports,         only: [ :create ]
     member do
       get  :suggestions
       get  :more_suggestions
       get  :analysis
       get  :intent
       post :save_intent
+      get  :export
     end
   end
 

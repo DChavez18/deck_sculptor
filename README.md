@@ -10,6 +10,10 @@ DeckSculptor is a Magic: The Gathering Commander (EDH) deck builder built with R
 - **EDHREC popularity data** showing the most-played cards for your commander
 - **Combo detection** via Commander Spellbook, scoped to your commander
 - **Mana curve and strategy analysis** with category breakdown charts
+- **AI deck advisor chat** powered by Claude — ask questions about your deck and get MTG-focused advice
+- **Persistent chat history** per deck, stored across page reloads
+- **Alphabetized card display** within each category for easier scanning
+- **Duplicate card protection** — adding a card already in your deck shows a friendly error instead of a crash
 
 ## Setup
 
@@ -63,8 +67,26 @@ bundle exec rubocop
 bundle exec brakeman --no-pager
 ```
 
+## Phase History
+
+| Phase | What shipped |
+|---|---|
+| 1 | Models, migrations, RSpec setup |
+| 2 | ScryfallService, WebMock, CardCache |
+| 3 | UI, controllers, views, CardCategorizer, Stimulus |
+| 4 | SuggestionEngine, EdhrecService, ComboFinderService |
+| 4 hotfix | Commander selection, bracket level 1–5 |
+| 4 hotfix-2 | Live card search, card images in deck list |
+| 5 | Strategy analysis, archetype detection, color gap analysis |
+| 6 | Commander profile page, EDHREC integration, combo synergy |
+| 7 | Smarter suggestions, EDHREC fix, intent questionnaire, edit/delete |
+| 8 | Flip card UI, thumbs up/down feedback, more-like-this suggestions |
+| 9 | Intent-driven suggestions, Scryfall oracle tags, CardCognition, editable deck attributes |
+| 10 | Card model, deck-level blacklist, reliable thumbs-down persistence |
+| 11 | AI deck advisor chat (Claude API), DeckChat model, MTG guardrails |
+| 12 | UX polish, duplicate card guard, alphabetized card lists, Building Toward panel, load more fix |
+
 ## Roadmap
 
-- **Phase 5 — Strategy Analysis:** Archetype detection, color identity gap analysis, recommended ratios
-- **Phase 6 — Commander Profile:** Full EDHREC commander page integration, combo synergy scoring
-- **Phase 7 — Deployment:** Deploy to Railway with PostgreSQL, Solid Cache, and zero-downtime releases
+- **Phase 13 — Polish:** UpgradeFinder scoring tuning, upgrade card images, continued polish
+- **Phase 14 — Deployment:** Deploy to Railway with PostgreSQL, Solid Cache, and zero-downtime releases
