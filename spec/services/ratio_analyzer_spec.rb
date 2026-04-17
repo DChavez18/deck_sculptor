@@ -54,6 +54,14 @@ RSpec.describe RatioAnalyzer do
       end
     end
 
+    describe "quantity summing" do
+      it "sums quantity across multiple rows in the same category" do
+        create(:deck_card, deck: deck, card_name: "Island", category: "land", quantity: 26)
+        create(:deck_card, deck: deck, card_name: "Swamp",  category: "land", quantity: 8)
+        expect(analyzer.report[:land][:actual]).to eq(34)
+      end
+    end
+
     describe "cut_suggestions" do
       context "when a category is under target" do
         before { create(:deck_card, deck: deck, category: "creature", quantity: 5, cmc: 3.0) }

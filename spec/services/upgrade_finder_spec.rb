@@ -11,7 +11,7 @@ RSpec.describe UpgradeFinder do
   let!(:weak_sorcery) do
     create(:deck_card, deck: deck,
       card_name:   "Divination",
-      category:    "sorcery",
+      category:    "draw",
       oracle_text: "Draw two cards.",
       raw_data:    { "keywords" => [] })
   end

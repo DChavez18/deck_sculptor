@@ -14,7 +14,7 @@ module ApplicationHelper
     tags << "ramp" if ramp_text && !type.include?("Land")
 
     tags << "removal" if text.match?(/destroy|exile|sacrifice|return target/i)
-    tags << "wipe"    if text.match?(/destroy all|exile all|deals \d+ damage to each creature|deals x damage to each/i)
+    tags << "board_wipe" if text.match?(/destroy all|exile all|deals \d+ damage to each creature|deals x damage to each/i)
     tags << "land"    if type.include?("Land")
     tags << "combo"   if reasons.include?("Combo piece")
     tags.join(" ")

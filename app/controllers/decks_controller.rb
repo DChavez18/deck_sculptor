@@ -1,5 +1,22 @@
 class DecksController < ApplicationController
-  before_action :set_deck, only: [ :show, :edit, :update, :destroy, :suggestions, :more_suggestions, :analysis, :intent, :save_intent, :export ]
+  before_action :set_deck, only: [ :show, :edit, :update, :destroy, :suggestions, :more_suggestions, :analysis, :intent, :save_intent, :export, :cards_by_category ]
+
+  CATEGORY_LABELS = {
+    "land"         => "Land",
+    "ramp"         => "Ramp",
+    "draw"         => "Card Draw",
+    "removal"      => "Removal",
+    "board_wipe"   => "Board Wipe",
+    "tutor"        => "Tutor",
+    "protection"   => "Protection",
+    "creature"     => "Creature",
+    "instant"      => "Instant",
+    "sorcery"      => "Sorcery",
+    "artifact"     => "Artifact",
+    "enchantment"  => "Enchantment",
+    "planeswalker" => "Planeswalker",
+    "utility"      => "Utility"
+  }.freeze
 
   def index
     @decks = Deck.includes(:commander).order(created_at: :desc)
@@ -141,6 +158,17 @@ class DecksController < ApplicationController
     else
       render :intent, status: :unprocessable_entity
     end
+  end
+
+  def cards_by_category
+    @category       = params[:category]
+    @cards          = @deck.deck_cards
+                        .where("category = ? OR secondary_categories LIKE ?", @category, "%#{@category}%")
+                        .sort_by(&:card_name)
+    @category_label = CATEGORY_LABELS.fetch(
+      @category,
+      @category.tr("_", " ").split.map(&:capitalize).join(" ")
+    )
   end
 
   private

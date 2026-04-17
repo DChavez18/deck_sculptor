@@ -100,10 +100,12 @@
 <% end %>
 
 <%# Outer filter + ID wrapper %>
+<% suggested_category = CardCategorizer.new(card).category %>
+<% filter_tags = [suggestion[:pool].to_s.downcase, suggested_category].uniq.join(" ") %>
 <div id="suggestion-<%= card["id"] %>"
      data-suggestion-filter-target="card"
      data-card-name="<%= card["name"] %>"
-     data-filter-tags="<%= filter_tags_for(card, suggestion[:reasons]) %>">
+     data-filter-tags="<%= filter_tags %>">
 
   <% if flippable %>
     <div class="card-flip-wrapper cursor-pointer"

@@ -4,7 +4,8 @@ class DeckCard < ApplicationRecord
 
   CATEGORIES = %w[
     creature enchantment artifact instant sorcery
-    planeswalker land ramp draw removal protection combo utility
+    planeswalker battle land ramp draw removal board_wipe
+    tutor protection combo utility
   ].freeze
 
   BASIC_LANDS = %w[Plains Island Swamp Mountain Forest Wastes].freeze

@@ -1,4 +1,5 @@
 require "rails_helper"
+require "cgi"
 
 RSpec.describe "Commanders", type: :request do
   let(:scryfall_service)  { instance_double(ScryfallService) }
@@ -43,7 +44,7 @@ RSpec.describe "Commanders", type: :request do
       before { get commander_path(commander) }
 
       it { expect(response).to have_http_status(:ok) }
-      it { expect(response.body).to include(commander.name) }
+      it { expect(response.body).to include(CGI.escapeHTML(commander.name)) }
     end
 
     context "with EDHREC top cards" do

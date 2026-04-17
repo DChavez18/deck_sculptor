@@ -345,6 +345,30 @@ RSpec.describe "Decks", type: :request do
     end
   end
 
+  describe "GET /decks/:id/cards/:category" do
+    let!(:ramp_card) { create(:deck_card, deck: deck, category: "ramp", card_name: "Sol Ring") }
+
+    context "with cards in the category" do
+      before { get deck_cards_by_category_deck_path(deck, "ramp") }
+
+      it { expect(response).to have_http_status(:ok) }
+
+      it "shows cards in that category" do
+        expect(response.body).to include("Sol Ring")
+      end
+    end
+
+    context "with no cards in the category" do
+      before { get deck_cards_by_category_deck_path(deck, "tutor") }
+
+      it { expect(response).to have_http_status(:ok) }
+
+      it "shows the empty state message" do
+        expect(response.body).to include("No Tutor cards in this deck yet")
+      end
+    end
+  end
+
   describe "GET /decks/:id/intent" do
     before { get intent_deck_path(deck) }
 

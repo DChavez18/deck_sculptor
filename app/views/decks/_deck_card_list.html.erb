@@ -1,3 +1,21 @@
+<% category_labels = {
+  "land"         => "Land",
+  "ramp"         => "Ramp",
+  "draw"         => "Card Draw",
+  "removal"      => "Removal",
+  "board_wipe"   => "Board Wipe",
+  "tutor"        => "Tutor",
+  "protection"   => "Protection",
+  "creature"     => "Creature",
+  "instant"      => "Instant",
+  "sorcery"      => "Sorcery",
+  "artifact"     => "Artifact",
+  "enchantment"  => "Enchantment",
+  "planeswalker" => "Planeswalker",
+  "battle"       => "Battle",
+  "combo"        => "Combo",
+  "utility"      => "Utility"
+} %>
 <% if cards_by_category.empty? %>
   <div class="text-center py-16 border border-dashed border-slate-600 rounded-xl">
     <p class="text-slate-400">No cards added yet.</p>
@@ -22,7 +40,13 @@
       <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
         <div class="px-5 py-3 bg-slate-750 border-b border-slate-700 flex items-center justify-between cursor-pointer select-none"
              onclick="(function(el){var body=el.closest('.bg-slate-800').querySelector('.category-body');var chevron=el.querySelector('.chevron');var collapsed=body.style.display==='none';body.style.display=collapsed?'':'none';chevron.style.transform=collapsed?'':'rotate(-90deg)'})(this)">
-          <h3 class="text-white font-semibold capitalize"><%= category %></h3>
+          <% if category == "land"
+               mdfc_count = cards.count { |c| c.secondary_categories.present? }
+               mdfc_note  = mdfc_count > 0 ? " (#{mdfc_count} MDFC)" : ""
+             end %>
+          <h3 class="text-white font-semibold">
+            <%= category_labels.fetch(category, category.tr("_", " ").split.map(&:capitalize).join(" ")) %><%= mdfc_note %>
+          </h3>
           <div class="flex items-center gap-3">
             <span class="text-slate-400 text-sm"><%= cards.sum(&:quantity) %></span>
             <span class="chevron text-slate-400 text-sm transition-transform duration-150">▾</span>

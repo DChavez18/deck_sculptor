@@ -18,19 +18,23 @@ class DeckCardsController < ApplicationController
       return
     end
 
-    category   = CardCategorizer.new(card_data).category
+    all_cats  = CardCategorizer.new(card_data).categories
+    primary   = all_cats.first
+    secondary = (all_cats - [ primary ]).join(",")
+
     @deck_card = @deck.deck_cards.build(
       deck_card_params.except("return_to").merge(
-        scryfall_id:    card_data["id"],
-        card_name:      card_data["name"],
-        category:       category,
-        type_line:      card_data["type_line"],
-        mana_cost:      card_data["mana_cost"],
-        cmc:            card_data["cmc"],
-        color_identity: Array(card_data["color_identity"]).join(","),
-        oracle_text:    card_data["oracle_text"],
-        image_uri:      card_data.dig("image_uris", "normal"),
-        raw_data:       card_data
+        scryfall_id:           card_data["id"],
+        card_name:             card_data["name"],
+        category:              primary,
+        secondary_categories:  secondary,
+        type_line:             card_data["type_line"],
+        mana_cost:             card_data["mana_cost"],
+        cmc:                   card_data["cmc"],
+        color_identity:        Array(card_data["color_identity"]).join(","),
+        oracle_text:           card_data["oracle_text"],
+        image_uri:             card_data.dig("image_uris", "normal"),
+        raw_data:              card_data
       )
     )
 

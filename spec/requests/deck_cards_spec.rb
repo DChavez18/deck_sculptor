@@ -36,7 +36,7 @@ RSpec.describe "DeckCards", type: :request do
 
       it "auto-categorizes the card" do
         post deck_deck_cards_path(deck), params: params
-        expect(DeckCard.last.category).to eq("instant")
+        expect(DeckCard.last.category).to eq("removal")
       end
 
       it "uses Scryfall card name, not the submitted name" do
@@ -59,7 +59,7 @@ RSpec.describe "DeckCards", type: :request do
 
       it "auto-categorizes the card" do
         post deck_deck_cards_path(deck), params: params
-        expect(DeckCard.last.category).to eq("instant")
+        expect(DeckCard.last.category).to eq("removal")
       end
     end
 
@@ -164,6 +164,41 @@ RSpec.describe "DeckCards", type: :request do
         expect(response.body).to include("remove")
         expect(response.body).to include("suggestion-scryfall-123")
       end
+    end
+  end
+
+  describe "POST /decks/:deck_id/deck_cards — MDFC card" do
+    let(:mdfc_data) do
+      {
+        "id"             => "mdfc-001",
+        "name"           => "Sink into Stupor // Soporific Springs",
+        "type_line"      => "Instant // Land",
+        "mana_cost"      => "{2}{U}",
+        "cmc"            => 3.0,
+        "color_identity" => [ "U" ],
+        "oracle_text"    => nil,
+        "image_uris"     => { "normal" => "https://cards.scryfall.io/normal/front/test.jpg" },
+        "card_faces"     => [
+          { "type_line" => "Instant", "oracle_text" => "Return target nonland permanent to its owner's hand.", "keywords" => [] },
+          { "type_line" => "Land",    "oracle_text" => "Soporific Springs enters the battlefield tapped.", "keywords" => [] }
+        ]
+      }
+    end
+
+    before do
+      allow(scryfall_service).to receive(:find_card_by_id).with("mdfc-001").and_return(mdfc_data)
+    end
+
+    let(:params) { { deck_card: { scryfall_id: "mdfc-001", card_name: "Sink into Stupor // Soporific Springs", quantity: 1 } } }
+
+    it "sets primary category from front face" do
+      post deck_deck_cards_path(deck), params: params
+      expect(DeckCard.last.category).to eq("removal")
+    end
+
+    it "stores the back face category in secondary_categories" do
+      post deck_deck_cards_path(deck), params: params
+      expect(DeckCard.last.secondary_categories).to eq("land")
     end
   end
 

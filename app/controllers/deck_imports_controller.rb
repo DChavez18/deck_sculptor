@@ -26,23 +26,26 @@ class DeckImportsController < ApplicationController
         next
       end
 
-      category = CardCategorizer.new(card_data).category
-      existing = @deck.deck_cards.find_by(scryfall_id: card_data["id"])
+      all_cats  = CardCategorizer.new(card_data).categories
+      primary   = all_cats.first
+      secondary = (all_cats - [ primary ]).join(",")
+      existing  = @deck.deck_cards.find_by(scryfall_id: card_data["id"])
 
       if existing
         existing.update!(quantity: entry[:quantity])
         skipped += 1
       else
         @deck.deck_cards.create!(
-          scryfall_id:    card_data["id"],
-          card_name:      card_data["name"],
-          category:       category,
-          quantity:       entry[:quantity],
-          cmc:            card_data["cmc"],
-          color_identity: card_data["color_identity"]&.join(","),
-          type_line:      card_data["type_line"],
-          image_uri:      card_data.dig("image_uris", "normal") ||
-                          card_data.dig("card_faces", 0, "image_uris", "normal")
+          scryfall_id:          card_data["id"],
+          card_name:            card_data["name"],
+          category:             primary,
+          secondary_categories: secondary,
+          quantity:             entry[:quantity],
+          cmc:                  card_data["cmc"],
+          color_identity:       card_data["color_identity"]&.join(","),
+          type_line:            card_data["type_line"],
+          image_uri:            card_data.dig("image_uris", "normal") ||
+                                card_data.dig("card_faces", 0, "image_uris", "normal")
         )
         imported += 1
       end

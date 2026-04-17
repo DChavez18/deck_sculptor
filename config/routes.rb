@@ -15,6 +15,7 @@ Rails.application.routes.draw do
       get  :intent
       post :save_intent
       get  :export
+      get  "cards/:category", to: "decks#cards_by_category", as: :deck_cards_by_category
     end
   end
 

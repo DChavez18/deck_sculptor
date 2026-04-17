@@ -85,18 +85,21 @@
             <% entry = @ratio_report[bucket] %>
             <% next unless entry %>
             <% pct = [(entry[:actual].to_f / entry[:target]) * 100, 100].min.round %>
-            <div>
-              <div class="flex justify-between text-xs mb-1">
-                <span class="text-slate-400"><%= label %></span>
-                <span class="<%= entry[:actual] >= entry[:target] ? 'text-green-400' : 'text-slate-400' %>">
-                  <%= entry[:actual] %> / <%= entry[:target] %>
-                </span>
+            <%= link_to deck_cards_by_category_deck_path(@deck, bucket),
+                class: "block hover:bg-slate-750 rounded-lg transition-colors -mx-1 px-1" do %>
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="text-slate-400"><%= label %></span>
+                  <span class="<%= entry[:actual] >= entry[:target] ? 'text-green-400' : 'text-slate-400' %>">
+                    <%= entry[:actual] %> / <%= entry[:target] %>
+                  </span>
+                </div>
+                <div class="w-full bg-slate-700 rounded-full h-1.5">
+                  <div class="<%= entry[:actual] >= entry[:target] ? 'bg-green-500' : 'bg-blue-500' %> h-1.5 rounded-full"
+                       style="width: <%= pct %>%"></div>
+                </div>
               </div>
-              <div class="w-full bg-slate-700 rounded-full h-1.5">
-                <div class="<%= entry[:actual] >= entry[:target] ? 'bg-green-500' : 'bg-blue-500' %> h-1.5 rounded-full"
-                     style="width: <%= pct %>%"></div>
-              </div>
-            </div>
+            <% end %>
           <% end %>
         </div>
       </div>
