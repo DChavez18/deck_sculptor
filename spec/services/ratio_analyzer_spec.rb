@@ -62,6 +62,28 @@ RSpec.describe RatioAnalyzer do
       end
     end
 
+    describe "MDFC secondary categories" do
+      it "counts secondary land category toward land total" do
+        create(:deck_card, deck: deck, category: "removal", secondary_categories: "land", quantity: 2)
+        report = analyzer.report
+        expect(report[:removal][:actual]).to eq(2)
+        expect(report[:land][:actual]).to eq(2)
+      end
+
+      it "does not double-count when primary and secondary differ" do
+        create(:deck_card, deck: deck, category: "land", secondary_categories: "ramp", quantity: 1)
+        report = analyzer.report
+        expect(report[:land][:actual]).to eq(1)
+        expect(report[:ramp][:actual]).to eq(1)
+      end
+
+      it "ignores blank secondary_categories" do
+        create(:deck_card, deck: deck, category: "land", secondary_categories: nil, quantity: 3)
+        report = analyzer.report
+        expect(report[:land][:actual]).to eq(3)
+      end
+    end
+
     describe "cut_suggestions" do
       context "when a category is under target" do
         before { create(:deck_card, deck: deck, category: "creature", quantity: 5, cmc: 3.0) }

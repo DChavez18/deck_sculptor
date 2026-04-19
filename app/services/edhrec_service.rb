@@ -54,7 +54,7 @@ class EdhrecService
 
     merged
       .sort_by { |c| -(c["synergy"].to_f) }
-      .first(20)
+      .first(60)
       .map do |c|
         {
           name:      c["name"],

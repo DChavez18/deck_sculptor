@@ -308,10 +308,10 @@ RSpec.describe SuggestionEngine do
       end
     end
 
-    describe "+3 shared keyword with commander" do
-      it "awards +3 to a card sharing a keyword" do
+    describe "+2 shared keyword with commander" do
+      it "awards +2 to a card sharing a keyword" do
         result = engine.suggestions.find { |r| r[:card]["id"] == "card-flying" }
-        expect(result[:score]).to be >= 3
+        expect(result[:score]).to be >= 2
         expect(result[:reasons]).to include(a_string_matching(/Flying/))
       end
 
@@ -381,7 +381,7 @@ RSpec.describe SuggestionEngine do
       end
     end
 
-    describe "+2 fills mana curve gap" do
+    describe "+1 fills mana curve gap" do
       before do
         # Fill cmc slots 1, 3, 4, 5, 6 — leaving cmc 2 as the gap
         create(:deck_card, deck: deck, cmc: 1.0, category: "instant")
@@ -402,7 +402,7 @@ RSpec.describe SuggestionEngine do
       end
     end
 
-    describe "+2 fills underrepresented category" do
+    describe "+1 fills underrepresented category" do
       context "when deck has fewer than 10 creatures" do
         it "awards +2 to creature cards" do
           result = engine.suggestions.find { |r| r[:card]["id"] == "card-flying" }
@@ -452,9 +452,9 @@ RSpec.describe SuggestionEngine do
           ])
         end
 
-        it "awards +3 and tags 'High synergy staple'" do
+        it "awards +8 and tags 'High synergy staple'" do
           result = engine.suggestions.find { |r| r[:card]["id"] == "card-staple" }
-          expect(result[:score]).to be >= 3
+          expect(result[:score]).to be >= 8
           expect(result[:reasons]).to include("High synergy staple")
         end
       end
@@ -466,9 +466,9 @@ RSpec.describe SuggestionEngine do
           ])
         end
 
-        it "awards +2 and tags 'Commander staple'" do
+        it "awards +6 and tags 'Commander staple'" do
           result = engine.suggestions.find { |r| r[:card]["id"] == "card-staple" }
-          expect(result[:score]).to be >= 2
+          expect(result[:score]).to be >= 6
           expect(result[:reasons]).to include("Commander staple")
         end
       end
@@ -480,9 +480,9 @@ RSpec.describe SuggestionEngine do
           ])
         end
 
-        it "awards +1 and tags 'Popular pick'" do
+        it "awards +4 and tags 'Popular pick'" do
           result = engine.suggestions.find { |r| r[:card]["id"] == "card-staple" }
-          expect(result[:score]).to be >= 1
+          expect(result[:score]).to be >= 4
           expect(result[:reasons]).to include("Popular pick")
         end
       end
@@ -501,7 +501,7 @@ RSpec.describe SuggestionEngine do
       end
     end
 
-    describe "+2/+4 theme keyword boost" do
+    describe "+1/+2 theme keyword boost" do
       let(:token_card) do
         {
           "id"             => "card-token",
@@ -521,21 +521,21 @@ RSpec.describe SuggestionEngine do
       context "when deck has a matching theme keyword" do
         let(:deck) { create(:deck, commander: commander, themes: "tokens, aristocrats") }
 
-        it "awards +2 per matching keyword up to +4" do
+        it "awards +1 per matching keyword up to +2" do
           result = engine.suggestions.find { |r| r[:card]["id"] == "card-token" }
-          expect(result[:score]).to be >= 2
+          expect(result[:score]).to be >= 1
           expect(result[:reasons]).to include("Matches your theme: tokens")
         end
 
-        it "caps boost at +4 for two matching themes" do
+        it "caps boost at +2 for two matching themes" do
           two_theme_card = token_card.merge(
             "id"          => "card-two-themes",
             "oracle_text" => "tokens aristocrats"
           )
           allow(scryfall_service).to receive(:commander_suggestions).and_return([ two_theme_card ])
           result = engine.suggestions.find { |r| r[:card]["id"] == "card-two-themes" }
-          theme_score = result[:reasons].count { |r| r.start_with?("Matches your theme") } * 2
-          expect(theme_score).to be <= 4
+          theme_score = result[:reasons].count { |r| r.start_with?("Matches your theme") }
+          expect(theme_score).to be <= 2
         end
       end
 

@@ -73,6 +73,55 @@ RSpec.describe Deck, type: :model do
     end
   end
 
+  describe "#cards_by_type" do
+    it "groups cards by type_line" do
+      deck = create(:deck)
+      create(:deck_card, deck: deck, card_name: "Lightning Bolt", category: "instant", type_line: "Instant")
+      create(:deck_card, deck: deck, card_name: "Birds of Paradise", category: "creature", type_line: "Creature — Bird")
+      create(:deck_card, deck: deck, card_name: "Forest", category: "land", type_line: "Basic Land — Forest")
+
+      result = deck.cards_by_type
+      expect(result.keys).to eq(%w[creature instant land])
+    end
+
+    it "sorts creatures before instants before lands" do
+      deck = create(:deck)
+      create(:deck_card, deck: deck, card_name: "Llanowar Elves", category: "ramp", type_line: "Creature — Elf")
+      create(:deck_card, deck: deck, card_name: "Counterspell", category: "removal", type_line: "Instant")
+      create(:deck_card, deck: deck, card_name: "Swamp", category: "land", type_line: "Basic Land — Swamp")
+
+      types = deck.cards_by_type.keys
+      expect(types.index("creature")).to be < types.index("instant")
+      expect(types.index("instant")).to be < types.index("land")
+    end
+
+    it "sorts cards alphabetically within each type" do
+      deck = create(:deck)
+      create(:deck_card, deck: deck, card_name: "Zap", category: "instant", type_line: "Instant")
+      create(:deck_card, deck: deck, card_name: "Arcane Denial", category: "instant", type_line: "Instant")
+
+      result = deck.cards_by_type
+      expect(result["instant"].map(&:card_name)).to eq(%w[Arcane\ Denial Zap])
+    end
+
+    it "assigns unknown type_lines to other" do
+      deck = create(:deck)
+      create(:deck_card, deck: deck, card_name: "Weird Card", category: "utility", type_line: "Tribal")
+
+      result = deck.cards_by_type
+      expect(result.keys).to include("other")
+    end
+
+    it "buckets Enchantment Land type_line as land not enchantment" do
+      deck = create(:deck)
+      create(:deck_card, deck: deck, card_name: "Urza's Saga", category: "enchantment", type_line: "Enchantment Land — Urza's")
+
+      result = deck.cards_by_type
+      expect(result.keys).to include("land")
+      expect(result.keys).not_to include("enchantment")
+    end
+  end
+
   describe "#mana_curve" do
     it "groups non-land cards by cmc" do
       deck = create(:deck)

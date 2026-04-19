@@ -128,18 +128,18 @@ class SuggestionEngine
       qualifier ? card["oracle_text"].to_s.match?(/\b#{Regexp.escape(kw)}\s+#{Regexp.escape(qualifier)}/i) : true
     end
     if matching.any?
-      score   += 3
+      score   += 2
       reasons << "Shares keyword: #{matching.first}"
     end
 
     gap = mana_curve_gap
     if gap && card["cmc"].to_i == gap
-      score   += 2
+      score   += 1
       reasons << "Fills mana curve gap at #{gap}"
     end
 
     if fills_category_gap?(card)
-      score   += 2
+      score   += 1
       reasons << "Fills underrepresented category"
     end
 
@@ -186,11 +186,11 @@ class SuggestionEngine
     return [ 0, nil ] unless synergy
 
     if synergy >= 0.3
-      [ 3, "High synergy staple" ]
+      [ 8, "High synergy staple" ]
     elsif synergy >= 0.1
-      [ 2, "Commander staple" ]
+      [ 6, "Commander staple" ]
     elsif synergy > 0
-      [ 1, "Popular pick" ]
+      [ 4, "Popular pick" ]
     else
       [ 0, nil ]
     end
@@ -211,16 +211,27 @@ class SuggestionEngine
     card_colors.subset?(commander_colors)
   end
 
+  def memo_creature_count
+    @memo_creature_count ||= @deck.deck_cards.where(category: "creature").sum(:quantity)
+  end
+
+  def memo_mana_curve
+    @memo_mana_curve ||= @deck.mana_curve
+  end
+
+  def memo_combo_deck_names
+    @memo_combo_deck_names ||= Set.new(@deck.deck_cards.pluck(:card_name)) << @deck.commander.name
+  end
+
   def mana_curve_gap
-    curve = @deck.mana_curve
+    curve = memo_mana_curve
     return nil if curve.empty?
 
     (1..6).min_by { |cmc| curve.fetch(cmc, 0) }
   end
 
   def fills_category_gap?(card)
-    creature_count = @deck.deck_cards.where(category: "creature").sum(:quantity)
-    return false unless creature_count < CREATURE_THRESHOLD
+    return false unless memo_creature_count < CREATURE_THRESHOLD
 
     card["type_line"].to_s.include?("Creature")
   end
@@ -228,7 +239,7 @@ class SuggestionEngine
   def combo_synergy_boost?(card)
     return false if deck_combos.empty?
 
-    deck_names = Set.new(@deck.deck_cards.pluck(:card_name)) << @deck.commander.name
+    deck_names = memo_combo_deck_names
     card_name  = card["name"]
 
     deck_combos.any? do |combo|
@@ -253,7 +264,7 @@ class SuggestionEngine
     matched   = keywords.select { |kw| card_text.include?(kw.downcase) }.first(2)
     return { score: 0, reasons: [] } if matched.empty?
 
-    { score: matched.size * 2, reasons: matched.map { |kw| "Matches your theme: #{kw}" } }
+    { score: matched.size, reasons: matched.map { |kw| "Matches your theme: #{kw}" } }
   end
 
   def archetype_boost(card)

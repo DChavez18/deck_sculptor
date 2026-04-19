@@ -28,6 +28,12 @@ Named after Jace, the Mind Sculptor.
 - One branch per phase: phase-1-setup, phase-2-scryfall, etc.
 - Commit messages follow: "Phase N: short description"
 
+## Development workflow
+IMPORTANT: Always run `bin/rubocop -a` before every commit and fix any
+offenses. CI runs rubocop and will fail if there are violations. The most
+common offense is Layout/SpaceInsideArrayLiteralBrackets — use spaces
+inside array brackets: [ "a", "b" ] not ["a", "b"].
+
 ## Current status
 - Phase 1 complete and merged — models, migrations, RSpec setup
 - Phase 2 complete and merged — ScryfallService, WebMock, CardCache
@@ -43,10 +49,49 @@ Named after Jace, the Mind Sculptor.
 - Phase 10 complete and merged — Card model, deck-level blacklist, reliable thumbs-down persistence
 - Phase 11 complete and merged — AI deck advisor chat (Claude API), DeckChat model, MTG guardrails
 - Phase 12 complete and merged — UX polish, duplicate card guard, alphabetized card lists, Building Toward panel, load more fix
-- Phase 13 in progress — UpgradeFinder tuning, upgrade card images, continued polish
-- 421 examples, 0 failures
+- Phase 13 complete and merged — UpgradeFinder tuning, upgrade card images, continued polish
+- Phase 14 complete and merged — CardCategorizer rewrite (oracle text based functional categories), clickable category pages, MDFC secondary_categories support, backfill migration
+- Phase 15 complete and merged — deck card list type grouping, suggestion filters, EDHREC scoring boost, N+1 fixes
+- 502 examples, 0 failures
 - CI green
-- Currently on branch: `phase-13-polish-continued`
+- Currently on branch: `phase-16-deployment`
+
+## What was built in Phase 15
+- Deck card list now groups by card TYPE (Creature, Instant, Sorcery,
+  Artifact, Enchantment, Planeswalker, Land) not functional category
+- Deck::TYPE_LABELS and DISPLAY_ORDER constants — land priority in
+  bucketing ensures Enchantment Lands (e.g. Urza's Saga) show under Land
+- Land section header shows "Land · N cards · M MDFC" format
+- RatioAnalyzer#compute_actuals now counts secondary_categories so MDFC
+  lands count toward land total in Building Toward panel
+- Fixed N+1 queries in SuggestionEngine: memoized memo_creature_count,
+  memo_mana_curve, memo_combo_deck_names
+- Fixed IntentEngine pool labels to match filter pill values:
+  "Staple" → "ramp", "Card Draw" → "draw"
+- Added board_wipe (boardwipe), removal, land (utility-land) as
+  always-fetched staple pools
+- WIN_CONDITION_POOLS updated: "Removal" → "removal", "Board Wipes" →
+  "board_wipe"
+- EDHREC scoring boosted: +8/+6/+4 (was +3/+2/+1) so synergy cards
+  dominate suggestions
+- EDHREC card limit raised from 20 to 60
+- Other bonuses rebalanced: keyword +2, curve +1, category +1, theme
+  cap +2
+- Fixed boardwipe oracle tag: "wrath" → "boardwipe" (correct Scryfall tag)
+- 502 examples, 0 failures
+
+## What was built in Phase 14
+- CardCategorizer rewritten with oracle text priority: land → ramp → draw
+  → board_wipe → removal → tutor → protection → creature → type fallback
+- 42 spec examples covering all categories and edge cases
+- secondary_categories string column on DeckCard for MDFC/split card support
+- CardCategorizer#categories (plural) returns all applicable categories
+  by iterating card_faces
+- Backfill migration using CardCache → Scryfall fallback
+- Clickable Building Toward panel rows → /decks/:id/cards/:category pages
+  with full card image grid
+- Human-readable category labels in deck card list headers
+- Land header shows MDFC count
 
 ## What was built in Phase 10
 - Card model — scryfall_id (unique), name, type_line, oracle_text, image_uri,
@@ -241,11 +286,4 @@ Named after Jace, the Mind Sculptor.
   color_identity; find_or_create_from_scryfall, to_scryfall_hash
 
 ## Upcoming phases
-- Phase 13: UpgradeFinder scoring tuning, upgrade card images, polish
-- Phase 14: Deployment to Railway
-
-## Current task
-Phase 13 in progress — fixing UpgradeFinder so it stops suggesting
-sidegrades (e.g. Rhystic Study → Mystic Barrier). Tuning the scoring
-to require functional similarity and meaningful power delta. Also adding
-card images to the upgrade suggestions layout on the analysis page.
+- Phase 16: Deploy to Railway with PostgreSQL, Solid Cache — target May 1 MagicCon Las Vegas

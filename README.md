@@ -14,6 +14,10 @@ DeckSculptor is a Magic: The Gathering Commander (EDH) deck builder built with R
 - **Persistent chat history** per deck, stored across page reloads
 - **Alphabetized card display** within each category for easier scanning
 - **Duplicate card protection** — adding a card already in your deck shows a friendly error instead of a crash
+- **Functional card categorization** — oracle-text-based categories (ramp, draw, removal, etc.) with clickable category pages showing full card image grids
+- **MDFC support** — split/modal double-faced cards tracked with secondary categories so land-back MDFCs count toward both removal and land totals
+- **Suggestion filters** — filter suggestions by Card Draw, Ramp, Removal, Board Wipes, Lands, Combos with commander-synergy-first ranking powered by EDHREC
+- **Deck type grouping** — deck card list groups by card type (Creature, Instant, etc.) with smart MDFC handling
 
 ## Setup
 
@@ -85,8 +89,10 @@ bundle exec brakeman --no-pager
 | 10 | Card model, deck-level blacklist, reliable thumbs-down persistence |
 | 11 | AI deck advisor chat (Claude API), DeckChat model, MTG guardrails |
 | 12 | UX polish, duplicate card guard, alphabetized card lists, Building Toward panel, load more fix |
+| 13 | UpgradeFinder tuning, upgrade card images, continued polish |
+| 14 | CardCategorizer rewrite, clickable category pages, MDFC support |
+| 15 | Deck type grouping, suggestion filters, EDHREC scoring boost, N+1 fixes |
 
 ## Roadmap
 
-- **Phase 13 — Polish:** UpgradeFinder scoring tuning, upgrade card images, continued polish
-- **Phase 14 — Deployment:** Deploy to Railway with PostgreSQL, Solid Cache, and zero-downtime releases
+- **Phase 16 — Deployment:** Deploy to Railway with PostgreSQL, Solid Cache — target May 1 MagicCon Las Vegas

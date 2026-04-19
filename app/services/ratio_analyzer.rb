@@ -37,10 +37,19 @@ class RatioAnalyzer
   def compute_actuals
     counts = Hash.new(0)
     @deck.deck_cards.each do |dc|
-      bucket = CATEGORY_MAP[dc.category]
+      bucket = category_to_bucket(dc.category)
       counts[bucket] += dc.quantity if bucket
+
+      dc.secondary_categories.to_s.split(",").each do |sec_cat|
+        sec_bucket = category_to_bucket(sec_cat.strip)
+        counts[sec_bucket] += dc.quantity if sec_bucket
+      end
     end
     counts
+  end
+
+  def category_to_bucket(category)
+    CATEGORY_MAP[category]
   end
 
   def cut_suggestions_for(bucket, actual, target)

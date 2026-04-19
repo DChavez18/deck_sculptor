@@ -18,9 +18,9 @@ class IntentEngine
       [ "Combo", "graveyard-recursion" ]
     ],
     "control"   => [
-      [ "Removal", "counter-spell" ],
-      [ "Removal", "removal" ],
-      [ "Board Wipes", "boardwipe" ]
+      [ "removal", "counter-spell" ],
+      [ "removal", "removal" ],
+      [ "board_wipe", "boardwipe" ]
     ],
     "tokens"    => [
       [ "Win Condition", "token-generation" ]
@@ -96,12 +96,21 @@ class IntentEngine
   def fetch_all_pools(service, colors, budget_opts)
     entries = []
 
-    # All decks get ramp + card draw staples
+    # All decks get staple pools
     fetch_tagged(service, "ramp", colors, budget_opts).each do |card|
-      entries << build_entry(card, "Staple", "ramp")
+      entries << build_entry(card, "ramp", "ramp")
     end
     fetch_tagged(service, "draw-card", colors, budget_opts).each do |card|
-      entries << build_entry(card, "Card Draw", "draw-card")
+      entries << build_entry(card, "draw", "draw-card")
+    end
+    fetch_tagged(service, "boardwipe", colors, budget_opts).each do |card|
+      entries << build_entry(card, "board_wipe", "boardwipe")
+    end
+    fetch_tagged(service, "removal", colors, budget_opts).each do |card|
+      entries << build_entry(card, "removal", "removal")
+    end
+    fetch_tagged(service, "utility-land", colors, budget_opts).each do |card|
+      entries << build_entry(card, "land", "utility-land")
     end
 
     # Win-condition-specific pools

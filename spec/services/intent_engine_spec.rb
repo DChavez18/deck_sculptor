@@ -65,6 +65,21 @@ RSpec.describe IntentEngine, type: :service do
       engine.suggestions
       expect(scryfall).to have_received(:cards_by_function).with("draw-card", any_args)
     end
+
+    it "always fetches boardwipe" do
+      engine.suggestions
+      expect(scryfall).to have_received(:cards_by_function).with("boardwipe", any_args)
+    end
+
+    it "always fetches removal" do
+      engine.suggestions
+      expect(scryfall).to have_received(:cards_by_function).with("removal", any_args)
+    end
+
+    it "always fetches utility-land" do
+      engine.suggestions
+      expect(scryfall).to have_received(:cards_by_function).with("utility-land", any_args)
+    end
   end
 
   # ── win_condition pools ───────────────────────────────────────────────────
@@ -109,8 +124,8 @@ RSpec.describe IntentEngine, type: :service do
       it "fetches counter-spell, removal, and boardwipe" do
         engine.suggestions
         expect(scryfall).to have_received(:cards_by_function).with("counter-spell", any_args)
-        expect(scryfall).to have_received(:cards_by_function).with("removal", any_args)
-        expect(scryfall).to have_received(:cards_by_function).with("boardwipe", any_args)
+        expect(scryfall).to have_received(:cards_by_function).with("removal", any_args).at_least(:once)
+        expect(scryfall).to have_received(:cards_by_function).with("boardwipe", any_args).at_least(:once)
       end
     end
 

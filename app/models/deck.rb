@@ -27,8 +27,29 @@ class Deck < ApplicationRecord
     (non_lands.sum(:cmc) / non_lands.count.to_f).round(2)
   end
 
+  TYPE_LABELS = {
+    "creature"     => "Creature",
+    "instant"      => "Instant",
+    "sorcery"      => "Sorcery",
+    "artifact"     => "Artifact",
+    "enchantment"  => "Enchantment",
+    "planeswalker" => "Planeswalker",
+    "land"         => "Land",
+    "other"        => "Other"
+  }.freeze
+
   def cards_by_category
     deck_cards.sort_by(&:card_name).group_by(&:category)
+  end
+
+  DISPLAY_ORDER = %w[creature instant sorcery artifact enchantment planeswalker land other].freeze
+
+  def cards_by_type
+    type_priority = %w[land creature instant sorcery artifact enchantment planeswalker]
+    deck_cards.sort_by(&:card_name).group_by do |dc|
+      type_line = dc.type_line.to_s.downcase
+      type_priority.find { |t| type_line.include?(t) } || "other"
+    end.sort_by { |type, _| DISPLAY_ORDER.index(type) || 999 }.to_h
   end
 
   def mana_curve
