@@ -221,7 +221,7 @@
       <% @upgrades.each do |upgrade| %>
         <div class="border border-slate-700 rounded-lg p-4">
           <%# Card pair — centered, fixed-width cards %>
-          <div class="flex items-start justify-center gap-4 mb-4">
+          <div class="flex flex-wrap items-start justify-center gap-4 mb-4">
             <%# Current card %>
             <% sid = upgrade[:current_card].scryfall_id %>
             <% current_img = sid.present? ? "https://cards.scryfall.io/normal/front/#{sid[0]}/#{sid[1]}/#{sid}.jpg" : nil %>
