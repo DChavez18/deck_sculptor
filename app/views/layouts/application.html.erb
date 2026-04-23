@@ -19,10 +19,10 @@
   </head>
 
   <body class="bg-slate-900 text-slate-100 min-h-screen">
-    <nav class="bg-slate-800 border-b border-slate-700 px-6 py-4">
-      <div class="max-w-6xl mx-auto flex items-center justify-between">
+    <nav class="bg-slate-800 border-b border-slate-700 px-4 py-3 sm:px-6 sm:py-4">
+      <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
         <%= link_to "Deck Sculptor", root_path, class: "text-blue-400 font-bold text-xl tracking-wide hover:text-blue-300" %>
-        <div class="flex gap-4 items-center">
+        <div class="flex flex-wrap gap-2 sm:gap-4 items-center">
           <%= link_to "My Decks",   decks_path,     class: "text-slate-300 hover:text-white text-sm" %>
           <%= link_to "Templates",  templates_path, class: "text-slate-300 hover:text-white text-sm" %>
           <%= link_to "New Deck",   new_deck_path,  class: "bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-md font-medium" %>
@@ -46,7 +46,7 @@
       </div>
     <% end %>
 
-    <main class="max-w-6xl mx-auto px-6 py-8">
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
       <%= yield %>
     </main>
   </body>

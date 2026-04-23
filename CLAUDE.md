@@ -285,5 +285,12 @@ inside array brackets: [ "a", "b" ] not ["a", "b"].
 - Card — scryfall_id (unique), name, type_line, oracle_text, image_uri, cmc,
   color_identity; find_or_create_from_scryfall, to_scryfall_hash
 
+## Railway deployment (Phase 16)
+Required environment variables in Railway dashboard:
+- `RAILS_MASTER_KEY` — contents of config/master.key
+- `DATABASE_URL` — provided automatically by Railway PostgreSQL plugin
+- `ANTHROPIC_API_KEY` — your Anthropic API key for the AI advisor
+- `RAILS_ENV=production`
+
 ## Upcoming phases
 - Phase 16: Deploy to Railway with PostgreSQL, Solid Cache — target May 1 MagicCon Las Vegas

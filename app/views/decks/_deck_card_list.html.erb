@@ -57,12 +57,12 @@
                 <div class="flex items-center gap-1 shrink-0">
                   <%= button_to deck_deck_card_path(deck, card), method: :patch,
                       params: { deck_card: { quantity: card.quantity - 1 } },
-                      class: "bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white w-5 h-5 rounded text-xs font-bold leading-none flex items-center justify-center" do %>−<% end %>
+                      class: "bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white w-11 h-11 sm:w-5 sm:h-5 rounded text-xs font-bold leading-none flex items-center justify-center" do %>−<% end %>
                   <span class="text-slate-300 text-sm w-5 text-center"><%= card.quantity %></span>
                   <%= button_to deck_deck_card_path(deck, card), method: :patch,
                       params: { deck_card: { quantity: card.quantity + 1 } },
                       disabled: !card.basic_land? && card.quantity >= 1,
-                      class: "bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white w-5 h-5 rounded text-xs font-bold leading-none flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed" do %>+<% end %>
+                      class: "bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white w-11 h-11 sm:w-5 sm:h-5 rounded text-xs font-bold leading-none flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed" do %>+<% end %>
                 </div>
                 <span class="text-white text-sm"><%= card.card_name %></span>
                 <% if card.mana_cost.present? %>
