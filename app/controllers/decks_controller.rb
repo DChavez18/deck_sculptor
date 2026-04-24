@@ -1,4 +1,6 @@
 class DecksController < ApplicationController
+  allow_unauthenticated_access
+
   before_action :set_deck, only: [ :show, :edit, :update, :destroy, :suggestions, :more_suggestions, :analysis, :intent, :save_intent, :export, :cards_by_category ]
 
   CATEGORY_LABELS = {
@@ -19,7 +21,7 @@ class DecksController < ApplicationController
   }.freeze
 
   def index
-    @decks = Deck.includes(:commander).order(created_at: :desc)
+    @decks = deck_scope.includes(:commander).order(created_at: :desc)
   end
 
   def new
@@ -44,6 +46,12 @@ class DecksController < ApplicationController
           card_data = ScryfallService.new.find_card_by_id(scryfall_id)
           Commander.find_or_create_from_scryfall(card_data) if card_data
         end
+    end
+
+    if Current.user
+      @deck.user = Current.user
+    else
+      @deck.anonymous_session_token = cookies.signed[:anonymous_session_token]
     end
 
     if @deck.save
@@ -177,8 +185,16 @@ class DecksController < ApplicationController
     MergeSuggestions.new(commander, intent).call
   end
 
+  def deck_scope
+    if Current.user
+      Deck.where(user: Current.user)
+    else
+      Deck.where(anonymous_session_token: cookies.signed[:anonymous_session_token])
+    end
+  end
+
   def set_deck
-    @deck = Deck.includes(:commander, :deck_cards).find(params[:id])
+    @deck = deck_scope.includes(:commander, :deck_cards).find(params[:id])
   end
 
   def deck_params

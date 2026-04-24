@@ -18,6 +18,8 @@ DeckSculptor is a Magic: The Gathering Commander (EDH) deck builder built with R
 - **MDFC support** — split/modal double-faced cards tracked with secondary categories so land-back MDFCs count toward both removal and land totals
 - **Suggestion filters** — filter suggestions by Card Draw, Ramp, Removal, Board Wipes, Lands, Combos with commander-synergy-first ranking powered by EDHREC
 - **Deck type grouping** — deck card list groups by card type (Creature, Instant, etc.) with smart MDFC handling
+- **User accounts** — sign up with Google in one click, or use email/password if you prefer
+- **Anonymous deck building** — start building a deck without signing in; your decks are automatically saved to your account when you sign up or sign in
 
 ## Setup
 
@@ -32,6 +34,39 @@ bin/dev
 ```
 
 Visit [http://localhost:3000](http://localhost:3000).
+
+### Google OAuth (optional for local dev)
+
+The app supports Google SSO via omniauth-google-oauth2. For local
+development you can skip this and use email/password signup instead. To
+enable Google signin locally:
+
+1. Create an OAuth client in the [Google Cloud Console](https://console.cloud.google.com)
+   (APIs & Services → Credentials → Create OAuth Client ID → Web application)
+2. Add `http://localhost:3000/auth/google_oauth2/callback` as an
+   authorized redirect URI
+3. Add the credentials to your Rails credentials file:
+
+```bash
+bin/rails credentials:edit
+```
+
+```yaml
+google:
+  client_id: your-client-id.apps.googleusercontent.com
+  client_secret: your-client-secret
+```
+
+### Anthropic API key (required for AI deck advisor)
+
+```bash
+bin/rails credentials:edit
+```
+
+```yaml
+anthropic:
+  api_key: sk-ant-...
+```
 
 ## Tech Stack
 
@@ -92,7 +127,10 @@ bundle exec brakeman --no-pager
 | 13 | UpgradeFinder tuning, upgrade card images, continued polish |
 | 14 | CardCategorizer rewrite, clickable category pages, MDFC support |
 | 15 | Deck type grouping, suggestion filters, EDHREC scoring boost, N+1 fixes |
+| 16 | Railway deployment, mobile responsive fixes, healthcheck route |
+| 16 hotfix | Fix Railway healthcheck (startCommand, puma bind, bypass Thruster) |
 
 ## Roadmap
 
-- **Phase 16 — Deployment:** Deploy to Railway with PostgreSQL, Solid Cache — target May 1 MagicCon Las Vegas
+- **Phase 17 — Authentication:** Google SSO (primary) + email/password fallback, anonymous deck claim flow — in progress, target May 1 MagicCon Las Vegas
+- **Post-MagicCon:** Custom domain (decksculptor.com pending), password reset UI, profile editing, combos page polish

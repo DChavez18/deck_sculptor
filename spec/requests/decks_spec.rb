@@ -1,8 +1,11 @@
 require "rails_helper"
 
 RSpec.describe "Decks", type: :request do
+  let!(:user)      { create(:user) }
   let!(:commander) { create(:commander) }
-  let!(:deck) { create(:deck, commander: commander) }
+  let!(:deck)      { create(:deck, :owned_by_user, user: user, commander: commander) }
+
+  before { sign_in_as(user) }
 
   describe "GET /decks" do
     before { get decks_path }

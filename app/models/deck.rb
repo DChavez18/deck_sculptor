@@ -1,5 +1,6 @@
 class Deck < ApplicationRecord
   belongs_to :commander
+  belongs_to :user, optional: true
   has_many   :deck_cards,          dependent: :destroy
   has_many   :suggestion_feedbacks, dependent: :destroy
   has_many   :deck_chats,           dependent: :destroy
@@ -12,6 +13,15 @@ class Deck < ApplicationRecord
   validates :archetype,      inclusion: { in: ARCHETYPES },     allow_nil: true
   validates :bracket_level,  inclusion: { in: BRACKET_LEVELS }, allow_nil: true
   validates :budget,         inclusion: { in: BUDGETS },        allow_nil: true
+  validate  :ownership_present
+
+  scope :owned_by, ->(owner) {
+    if owner.is_a?(User)
+      where(user: owner)
+    else
+      where(anonymous_session_token: owner)
+    end
+  }
 
   def card_count
     deck_cards.sum(:quantity)
@@ -73,5 +83,12 @@ class Deck < ApplicationRecord
 
   def card_blacklisted?(scryfall_id)
     blacklisted_card_ids.include?(scryfall_id)
+  end
+
+  private
+
+  def ownership_present
+    return if user_id.present? || user.present? || anonymous_session_token.present?
+    errors.add(:base, "must belong to a user or have a session token")
   end
 end

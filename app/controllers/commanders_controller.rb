@@ -1,4 +1,6 @@
 class CommandersController < ApplicationController
+  allow_unauthenticated_access
+
   def search
     @results = []
     if params[:q].present?

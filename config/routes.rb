@@ -1,4 +1,10 @@
 Rails.application.routes.draw do
+  resource :session
+  resources :passwords, param: :token
+  get  "/signup",                  to: "registrations#new",            as: :signup
+  post "/signup",                  to: "registrations#create"
+  get  "/auth/:provider/callback", to: "omniauth_callbacks#create"
+  get  "/auth/failure",            to: "omniauth_callbacks#failure"
   get "/up", to: proc { [ 200, {}, [ "ok" ] ] }
 
   root "decks#index"

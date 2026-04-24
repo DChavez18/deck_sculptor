@@ -1,4 +1,6 @@
 class TemplatesController < ApplicationController
+  allow_unauthenticated_access
+
   TEMPLATES = [
     {
       id:          "aggro-beatdown",

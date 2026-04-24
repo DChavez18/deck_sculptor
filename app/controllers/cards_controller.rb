@@ -1,4 +1,6 @@
 class CardsController < ApplicationController
+  allow_unauthenticated_access
+
   def search
     @results = []
     if params[:q].present? && params[:q].length >= 2

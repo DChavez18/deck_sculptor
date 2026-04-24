@@ -1,4 +1,5 @@
 class SuggestionFeedbacksController < ApplicationController
+  allow_unauthenticated_access
   before_action :set_deck
 
   def create

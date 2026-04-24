@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_18_000003) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_24_215307) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -90,6 +90,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_18_000003) do
   end
 
   create_table "decks", force: :cascade do |t|
+    t.string "anonymous_session_token"
     t.string "archetype"
     t.string "blacklisted_card_ids", default: [], array: true
     t.integer "bracket_level", default: 3
@@ -101,8 +102,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_18_000003) do
     t.string "name", null: false
     t.text "themes"
     t.datetime "updated_at", null: false
+    t.integer "user_id"
     t.string "win_condition"
+    t.index ["anonymous_session_token"], name: "index_decks_on_anonymous_session_token"
     t.index ["commander_id"], name: "index_decks_on_commander_id"
+    t.index ["user_id"], name: "index_decks_on_user_id"
+  end
+
+  create_table "sessions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "ip_address"
+    t.datetime "updated_at", null: false
+    t.string "user_agent"
+    t.bigint "user_id", null: false
+    t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
   create_table "suggestion_feedbacks", force: :cascade do |t|
@@ -118,10 +131,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_18_000003) do
     t.index ["deck_id"], name: "index_suggestion_feedbacks_on_deck_id"
   end
 
+  create_table "users", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email_address", null: false
+    t.string "google_uid"
+    t.string "password_digest"
+    t.datetime "updated_at", null: false
+    t.index ["email_address"], name: "index_users_on_email_address", unique: true
+    t.index ["google_uid"], name: "index_users_on_google_uid", unique: true
+  end
+
   add_foreign_key "deck_cards", "cards"
   add_foreign_key "deck_cards", "decks"
   add_foreign_key "deck_chats", "decks"
   add_foreign_key "decks", "commanders"
+  add_foreign_key "sessions", "users"
   add_foreign_key "suggestion_feedbacks", "cards"
   add_foreign_key "suggestion_feedbacks", "decks"
 end

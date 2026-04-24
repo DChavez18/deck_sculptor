@@ -1,0 +1,44 @@
+<div class="max-w-md mx-auto mt-12">
+  <div class="bg-slate-800 border border-slate-700 rounded-xl p-8">
+    <h1 class="text-2xl font-bold text-white mb-8 text-center">Sign in to Deck Sculptor</h1>
+
+    <%= render "shared/google_signin_button" %>
+
+    <div class="my-6 flex items-center gap-4">
+      <div class="flex-1 border-t border-slate-600"></div>
+      <span class="text-slate-400 text-sm">or sign in with email</span>
+      <div class="flex-1 border-t border-slate-600"></div>
+    </div>
+
+    <%= form_with url: session_path, method: :post do |form| %>
+      <div class="mb-4">
+        <%= form.label :email_address, "Email", class: "block text-sm font-medium text-slate-300 mb-1" %>
+        <%= form.email_field :email_address,
+            required: true,
+            autofocus: true,
+            autocomplete: "username",
+            placeholder: "you@example.com",
+            value: params[:email_address],
+            class: "w-full bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" %>
+      </div>
+
+      <div class="mb-6">
+        <%= form.label :password, "Password", class: "block text-sm font-medium text-slate-300 mb-1" %>
+        <%= form.password_field :password,
+            required: true,
+            autocomplete: "current-password",
+            placeholder: "••••••••",
+            maxlength: 72,
+            class: "w-full bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" %>
+      </div>
+
+      <%= form.submit "Sign in",
+          class: "w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-md cursor-pointer transition-colors min-h-[44px]" %>
+    <% end %>
+
+    <p class="mt-6 text-center text-sm text-slate-400">
+      Don't have an account?
+      <%= link_to "Sign up", signup_path, class: "text-blue-400 hover:text-blue-300 font-medium" %>
+    </p>
+  </div>
+</div>

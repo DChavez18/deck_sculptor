@@ -3,6 +3,7 @@ require "rails_helper"
 RSpec.describe Deck, type: :model do
   describe "associations" do
     it { should belong_to(:commander) }
+    it { should belong_to(:user).optional }
     it { should have_many(:deck_cards).dependent(:destroy) }
     it { should have_many(:suggestion_feedbacks).dependent(:destroy) }
   end
@@ -11,6 +12,35 @@ RSpec.describe Deck, type: :model do
     it { should validate_presence_of(:name) }
     it { should validate_inclusion_of(:archetype).in_array(Deck::ARCHETYPES).allow_nil }
     it { should validate_inclusion_of(:bracket_level).in_array(Deck::BRACKET_LEVELS).allow_nil }
+
+    it "is valid with a user_id and no anonymous_session_token" do
+      expect(build(:deck, :owned_by_user)).to be_valid
+    end
+
+    it "is valid with anonymous_session_token and no user_id" do
+      expect(build(:deck)).to be_valid
+    end
+
+    it "is invalid with neither user_id nor anonymous_session_token" do
+      deck = build(:deck, anonymous_session_token: nil, user: nil)
+      expect(deck).not_to be_valid
+      expect(deck.errors[:base]).to include("must belong to a user or have a session token")
+    end
+  end
+
+  describe ".owned_by" do
+    let(:user) { create(:user) }
+    let!(:user_deck) { create(:deck, :owned_by_user, user: user) }
+    let!(:token_deck) { create(:deck, anonymous_session_token: "abc123") }
+    let!(:other_deck) { create(:deck, anonymous_session_token: "other") }
+
+    it "returns decks scoped to user when passed a User" do
+      expect(Deck.owned_by(user)).to contain_exactly(user_deck)
+    end
+
+    it "returns decks scoped to token when passed a string" do
+      expect(Deck.owned_by("abc123")).to contain_exactly(token_deck)
+    end
   end
 
   describe "#card_count" do

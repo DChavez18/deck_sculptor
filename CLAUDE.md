@@ -52,9 +52,54 @@ inside array brackets: [ "a", "b" ] not ["a", "b"].
 - Phase 13 complete and merged — UpgradeFinder tuning, upgrade card images, continued polish
 - Phase 14 complete and merged — CardCategorizer rewrite (oracle text based functional categories), clickable category pages, MDFC secondary_categories support, backfill migration
 - Phase 15 complete and merged — deck card list type grouping, suggestion filters, EDHREC scoring boost, N+1 fixes
+- Phase 16 complete and merged — Railway deployment, mobile responsive fixes, healthcheck route
+- Phase 16 hotfix complete and merged — fix Railway healthcheck (remove shell-operator startCommand, remove duplicate puma bind, bypass Thruster)
+- Live at https://web-production-aefc3.up.railway.app
 - 502 examples, 0 failures
 - CI green
-- Currently on branch: `phase-16-deployment`
+- Currently on branch: `phase-17-authentication`
+
+## What was built in Phase 17 (in progress)
+- Rails 8 built-in authentication as the foundation (User, Session,
+  SessionsController, PasswordsController, Authentication concern)
+- omniauth-google-oauth2 layered on top for Google SSO
+- Google SSO as the primary signin path, email/password as fallback
+- User model: email (unique, indexed), password_digest (nullable for
+  SSO-only users), google_uid (unique, indexed, nullable)
+- Session model: belongs_to user, stores ip_address and user_agent
+- Deck model: belongs_to :user (optional), plus anonymous_session_token
+  column for pre-auth deck tracking
+- Anonymous deck claim flow: signed cookie tracks pre-auth session, on
+  signup/signin all decks with matching token get reassigned to new user
+- OmniauthCallbacksController handles /auth/google_oauth2/callback,
+  creates user on first signin, links google_uid on subsequent signins
+- RegistrationsController for email/password signup
+- Authorization: decks scoped to current_user OR anonymous_session_token
+  in DecksController; unauthorized access redirects to signin
+- Signin/signup views with prominent "Continue with Google" button and
+  email/password form below
+- Nav partial shows signin link or user email + signout link
+- ENV vars required: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+- OAuth redirect URIs configured for both Railway prod and localhost dev
+
+## What was built in Phase 16
+- Deployment config: Procfile, railway.toml, config/database.yml reads
+  DATABASE_URL in production
+- Mobile responsive fixes across the app: 44px minimum tap targets on
+  all interactive elements, flex-wrap on nav so it doesn't overflow on
+  narrow viewports, responsive deck card grid
+- /up healthcheck route (inline proc returning 200 "ok")
+- active_storage.variant_processor set to :disabled in production to
+  avoid libvips boot issue on Railway
+- Puma config binds via `port ENV.fetch("PORT", 3000)` — Puma's port
+  directive already binds to 0.0.0.0 by default
+- Dockerfile bypasses Thruster so Puma serves directly on Railway's
+  dynamic $PORT (Thruster's port 80 was incompatible with Railway's
+  healthcheck)
+- railway.toml has no startCommand or builder keys — Railway uses the
+  Dockerfile's ENTRYPOINT (/rails/bin/docker-entrypoint runs db:prepare)
+  and CMD directly
+- Live URL: https://web-production-aefc3.up.railway.app
 
 ## What was built in Phase 15
 - Deck card list now groups by card TYPE (Creature, Instant, Sorcery,
@@ -275,9 +320,17 @@ inside array brackets: [ "a", "b" ] not ["a", "b"].
 - 285 examples, 0 failures
 
 ## Models overview
+- User — email (unique), password_digest (nullable, for email/password
+  signup), google_uid (unique, nullable, for SSO); has_many :decks,
+  has_many :sessions
+- Session — belongs to User, stores ip_address and user_agent; Rails 8
+  built-in session-based auth (not JWT, not Devise)
 - Commander — Scryfall card data for the chosen commander
-- Deck — belongs to commander, holds 99 DeckCards; has win_condition, budget,
-  playstyle, themes, intent_completed, bracket_level fields
+- Deck — belongs to commander, belongs_to :user (optional), holds 99
+  DeckCards; has win_condition, budget, playstyle, themes,
+  intent_completed, bracket_level, anonymous_session_token fields. A
+  deck must have either a user_id OR an anonymous_session_token but not
+  neither (validation-enforced, not DB-enforced)
 - DeckCard — a card in a deck with category, cmc, color_identity (string)
 - CardCache — local Scryfall response cache, 7-day TTL
 - SuggestionFeedback — per-deck per-card thumbs up/down signal, unique on
@@ -285,12 +338,58 @@ inside array brackets: [ "a", "b" ] not ["a", "b"].
 - Card — scryfall_id (unique), name, type_line, oracle_text, image_uri, cmc,
   color_identity; find_or_create_from_scryfall, to_scryfall_hash
 
+## Authentication architecture
+- Rails 8 built-in authentication is the base — generated via
+  `bin/rails generate authentication`. No Devise.
+- Google SSO via omniauth-google-oauth2 + omniauth-rails_csrf_protection
+- Email/password is the fallback path; Google is primary
+- Password reset infrastructure exists (from the generator) but isn't
+  promoted in the UI — users who forget their password can either make
+  a new account or use Google
+- Current user accessed via `Current.user` (Rails 8 CurrentAttributes
+  pattern), set in the Authentication concern's before_action
+- Anonymous users get a signed `anonymous_session_token` cookie (6-month
+  expiry) set by ApplicationController. Decks created while logged out
+  store this token. On signin/signup, all decks with a matching token
+  are reassigned to the new user and the token is nulled out.
+- Authorization is scope-based, not role-based: decks visible to a user
+  are those where user_id matches Current.user.id, or (for anonymous
+  users) where anonymous_session_token matches the signed cookie. No
+  admin role exists yet.
+
 ## Railway deployment (Phase 16)
+Live URL: https://web-production-aefc3.up.railway.app
 Required environment variables in Railway dashboard:
 - `RAILS_MASTER_KEY` — contents of config/master.key
 - `DATABASE_URL` — provided automatically by Railway PostgreSQL plugin
 - `ANTHROPIC_API_KEY` — your Anthropic API key for the AI advisor
 - `RAILS_ENV=production`
+- `GOOGLE_CLIENT_ID` — from Google Cloud Console OAuth client (Phase 17)
+- `GOOGLE_CLIENT_SECRET` — from Google Cloud Console OAuth client (Phase 17)
+
+Deployment notes (learned the hard way in Phase 16 hotfix):
+- railway.toml should NOT contain a `startCommand` — Railway runs it in
+  exec form (no shell), so `&&` operators silently fail and no process
+  starts. Let the Dockerfile's ENTRYPOINT and CMD handle startup.
+- railway.toml should NOT contain a `[build]` section — Railway
+  auto-detects the Dockerfile and uses it directly.
+- config/puma.rb uses only `port ENV.fetch("PORT", 3000)` — no separate
+  `bind` directive; the `port` directive binds 0.0.0.0 by default.
+- Dockerfile CMD is `["./bin/rails", "server"]` NOT
+  `["./bin/thrust", ...]` — Thruster listens on port 80 and ignores
+  Railway's dynamic $PORT, breaking healthchecks. Puma serves directly.
+
+## Google OAuth setup (Phase 17)
+OAuth client configured at https://console.cloud.google.com (project:
+DeckSculptor). Authorized redirect URIs:
+- https://web-production-aefc3.up.railway.app/auth/google_oauth2/callback
+- http://localhost:3000/auth/google_oauth2/callback
+
+For local dev, add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to Rails
+credentials or a .env file (see README).
 
 ## Upcoming phases
-- Phase 16: Deploy to Railway with PostgreSQL, Solid Cache — target May 1 MagicCon Las Vegas
+- Phase 17: Authentication — Google SSO (primary) + email/password fallback,
+  anonymous deck claim flow (in progress, target: MagicCon May 1)
+- Phase 18+: Post-MagicCon — suggestion filter polish, combos page
+  improvements, custom domain, password reset UI, profile editing
