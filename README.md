@@ -129,8 +129,12 @@ bundle exec brakeman --no-pager
 | 15 | Deck type grouping, suggestion filters, EDHREC scoring boost, N+1 fixes |
 | 16 | Railway deployment, mobile responsive fixes, healthcheck route |
 | 16 hotfix | Fix Railway healthcheck (startCommand, puma bind, bypass Thruster) |
+| 17 | Authentication: Rails 8 auth, Google SSO, anonymous deck claim flow |
+| 17 hotfix 1 | Manual production migrations via railway ssh |
+| 17 hotfix 2 | Disable Turbo on Google signin button (CORS preflight fix) |
+| 17 polish | Show/hide password toggle on signin and signup |
 
 ## Roadmap
 
-- **Phase 17 — Authentication:** Google SSO (primary) + email/password fallback, anonymous deck claim flow — in progress, target May 1 MagicCon Las Vegas
-- **Post-MagicCon:** Custom domain (decksculptor.com pending), password reset UI, profile editing, combos page polish
+- **Phase 18 — Suggestion polish:** Refined suggestion filters and improved combos page (target: post-MagicCon May 1)
+- **Post-MagicCon:** Automatic migrations in deploy entrypoint, custom domain (decksculptor.com pending), password reset UI, profile editing

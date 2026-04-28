@@ -54,12 +54,15 @@ inside array brackets: [ "a", "b" ] not ["a", "b"].
 - Phase 15 complete and merged — deck card list type grouping, suggestion filters, EDHREC scoring boost, N+1 fixes
 - Phase 16 complete and merged — Railway deployment, mobile responsive fixes, healthcheck route
 - Phase 16 hotfix complete and merged — fix Railway healthcheck (remove shell-operator startCommand, remove duplicate puma bind, bypass Thruster)
+- Phase 17 complete and merged — Rails 8 authentication, Google SSO, anonymous deck claim flow
+- Phase 17 hotfix 1 (manual) — production migrations had to be run manually via railway ssh after deploy because Rails 8 entrypoint did not run db:prepare on container start
+- Phase 17 hotfix 2 complete and merged — disable Turbo on Google signin button so OAuth POST does a top-level redirect instead of XHR (Turbo's default fetch triggered a CORS preflight that Google rejected with 405)
 - Live at https://web-production-aefc3.up.railway.app
-- 502 examples, 0 failures
+- 541 examples, 0 failures
 - CI green
-- Currently on branch: `phase-17-authentication`
+- Currently on branch: `phase-17-password-visibility-toggle`
 
-## What was built in Phase 17 (in progress)
+## What was built in Phase 17
 - Rails 8 built-in authentication as the foundation (User, Session,
   SessionsController, PasswordsController, Authentication concern)
 - omniauth-google-oauth2 layered on top for Google SSO
@@ -81,6 +84,23 @@ inside array brackets: [ "a", "b" ] not ["a", "b"].
 - Nav partial shows signin link or user email + signout link
 - ENV vars required: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
 - OAuth redirect URIs configured for both Railway prod and localhost dev
+- Hotfix 1: Rails 8's docker-entrypoint did not run db:prepare on
+  server start, so production booted with no users/sessions/decks
+  ownership tables. Fix: ran `bin/rails db:migrate` manually inside
+  the Railway container via `railway ssh`. The entrypoint script
+  should be revisited post-MagicCon to make migrations automatic
+  on every deploy.
+- Hotfix 2: Turbo Drive intercepted the "Continue with Google"
+  button_to form submission and tried to fetch it via XHR, which
+  triggered a CORS preflight that Google's OAuth endpoint rejected
+  with 405 Method Not Allowed. Fix: added `data: { turbo: false }`
+  to the button_to in `app/views/shared/_google_signin_button.html.erb`
+  so the browser does a normal top-level POST that OmniAuth can
+  redirect from.
+- Polish: show/hide password toggle on signin and signup forms via
+  a small Stimulus controller (password_visibility_controller.js).
+  Eye icon swaps to eye-slash when password is visible. 44px tap
+  targets for mobile.
 
 ## What was built in Phase 16
 - Deployment config: Procfile, railway.toml, config/database.yml reads
@@ -378,18 +398,39 @@ Deployment notes (learned the hard way in Phase 16 hotfix):
 - Dockerfile CMD is `["./bin/rails", "server"]` NOT
   `["./bin/thrust", ...]` — Thruster listens on port 80 and ignores
   Railway's dynamic $PORT, breaking healthchecks. Puma serves directly.
+- Rails 8's default `bin/docker-entrypoint` does NOT run
+  `db:migrate` or `db:prepare` on container start. New migrations
+  must be run manually via `railway ssh` then `bin/rails db:migrate`
+  until the entrypoint is updated. (Future improvement: edit
+  bin/docker-entrypoint to run migrations before exec'ing the
+  server command.)
+- Turbo Drive intercepts form submissions and submits via fetch.
+  For OAuth flows where the form must do a top-level redirect to a
+  third party, add `data: { turbo: false }` to the form/button to
+  bypass Turbo and do a normal browser POST.
 
 ## Google OAuth setup (Phase 17)
 OAuth client configured at https://console.cloud.google.com (project:
-DeckSculptor). Authorized redirect URIs:
+deck-sculptor-494719). Authorized redirect URIs:
 - https://web-production-aefc3.up.railway.app/auth/google_oauth2/callback
 - http://localhost:3000/auth/google_oauth2/callback
 
-For local dev, add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to Rails
-credentials or a .env file (see README).
+For local dev, add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to
+Rails credentials under the `google:` key, or to a .env file. In
+production they are set as Railway environment variables.
+
+Note: as of MagicCon prep, the OAuth consent screen is still in
+"Testing" mode with explicit test users on the allowlist. Before
+the demo, click "PUBLISH APP" on the Google Auth Platform > Audience
+page so any Gmail user can sign in. For the basic email/profile
+scopes used here, no Google verification review is required —
+publish is instant.
 
 ## Upcoming phases
-- Phase 17: Authentication — Google SSO (primary) + email/password fallback,
-  anonymous deck claim flow (in progress, target: MagicCon May 1)
-- Phase 18+: Post-MagicCon — suggestion filter polish, combos page
-  improvements, custom domain, password reset UI, profile editing
+- Phase 18: Suggestion filter polish, combos page improvements
+  (target: post-MagicCon)
+- Polish bin/docker-entrypoint to run migrations automatically on
+  deploy (post-MagicCon)
+- Custom domain (decksculptor.com is squatted; revisit post-MagicCon)
+- Email verification, password reset UI promotion, profile editing
+  (intentionally out of scope for MagicCon)
