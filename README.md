@@ -135,6 +135,7 @@ bundle exec brakeman --no-pager
 | 17 polish | Show/hide password toggle on signin and signup |
 | 18 | Card image hover-zoom on laptop, tap-to-modal on mobile |
 | 18 hotfix | Fix add-card-from-search not updating deck list (Turbo Stream targeted suggestions DOM only) |
+| 18 hotfix | Building Toward panel now counts cards in every role they fulfill — creatures that ramp/draw/remove count toward both Creature and the functional bucket |
 
 ## Roadmap
 

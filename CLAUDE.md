@@ -59,10 +59,11 @@ inside array brackets: [ "a", "b" ] not ["a", "b"].
 - Phase 17 hotfix 2 complete and merged — disable Turbo on Google signin button so OAuth POST does a top-level redirect instead of XHR (Turbo's default fetch triggered a CORS preflight that Google rejected with 405)
 - Phase 18 in progress — card image hover-zoom on laptop, tap-to-modal on mobile
 - Phase 18 hotfix: fix add-card-from-search not updating deck card list (deck_cards#create previously returned a suggestions-page-only Turbo Stream that no-op'd on the deck show page; now appends the new card row AND removes any matching suggestion card)
+- Phase 18 hotfix: Building Toward panel now counts cards in all roles they fulfill (CardCategorizer#all_roles + RatioAnalyzer re-evaluates from stored oracle text) — creatures that also ramp/draw/remove now count toward both the Creature bucket and the functional bucket
 - Live at https://web-production-aefc3.up.railway.app
-- 544 examples, 0 failures
+- 551 examples, 0 failures
 - CI green
-- Currently on branch: `phase-18-hotfix-add-card-from-search`
+- Currently on branch: `phase-18-building-toward-counts`
 
 ## What was built in Phase 17
 - Rails 8 built-in authentication as the foundation (User, Session,
@@ -447,6 +448,17 @@ publish is instant.
   target. Also added @deck.deck_cards.reload in the RecordNotUnique
   rescue path to clear the unsaved card from the association cache
   before re-rendering the list.
+- Fixed Building Toward panel undercounting categories. Added
+  CardCategorizer#all_roles which collects every functional role a
+  card fulfills (ramp, draw, removal, board_wipe, tutor, protection,
+  creature) rather than returning the single waterfall winner. Lands
+  return ["land"] only (no false ramp from {T}: Add {X} text).
+  RatioAnalyzer#compute_actuals now re-evaluates each DeckCard via
+  all_roles from stored type_line, oracle_text, and raw_data — no
+  migration needed, retroactively correct for all existing decks.
+  The deck list grouping (cards_by_type) is untouched and continues
+  to use primary category only so cards don't appear in multiple
+  deck list sections.
 
 ## Upcoming phases
 - Phase 18: Suggestion filter polish, combos page improvements

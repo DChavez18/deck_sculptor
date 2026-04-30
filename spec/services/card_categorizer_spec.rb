@@ -305,4 +305,86 @@ RSpec.describe CardCategorizer do
       end
     end
   end
+
+  describe "#all_roles" do
+    context "creature with ramp text (Sakura-Tribe Elder pattern)" do
+      let(:card) do
+        {
+          "type_line"   => "Creature — Snake Shaman",
+          "oracle_text" => "Sacrifice this creature: Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle."
+        }
+      end
+
+      it "includes both ramp and creature roles" do
+        expect(categorizer.all_roles).to include("ramp", "creature")
+      end
+
+      it "does not include a type fallback string" do
+        expect(categorizer.all_roles).not_to include("sorcery", "instant", "artifact", "enchantment")
+      end
+    end
+
+    context "creature with removal text (Reclamation Sage pattern)" do
+      let(:card) do
+        {
+          "type_line"   => "Creature — Elf Shaman",
+          "oracle_text" => "When this creature enters the battlefield, you may destroy target artifact or enchantment."
+        }
+      end
+
+      it "includes both removal and creature roles" do
+        expect(categorizer.all_roles).to include("removal", "creature")
+      end
+    end
+
+    context "sorcery with draw text and no creature type" do
+      let(:card) do
+        {
+          "type_line"   => "Sorcery",
+          "oracle_text" => "Draw three cards. You lose 3 life for each color among permanents you control."
+        }
+      end
+
+      it "returns draw as the only role" do
+        expect(categorizer.all_roles).to eq([ "draw" ])
+      end
+    end
+
+    context "plain creature with no functional oracle text" do
+      let(:card) do
+        {
+          "type_line"   => "Creature — Human Warrior",
+          "oracle_text" => "First strike."
+        }
+      end
+
+      it "returns creature as the only role" do
+        expect(categorizer.all_roles).to eq([ "creature" ])
+      end
+    end
+
+    context "basic land with no other roles" do
+      let(:card) { { "type_line" => "Basic Land — Island", "oracle_text" => "" } }
+
+      it "returns land as the only role" do
+        expect(categorizer.all_roles).to eq([ "land" ])
+      end
+    end
+
+    context "MDFC card with removal front and land back" do
+      let(:card) do
+        {
+          "type_line"  => "Instant // Land",
+          "card_faces" => [
+            { "type_line" => "Instant", "oracle_text" => "Return target nonland permanent to its owner's hand.", "keywords" => [] },
+            { "type_line" => "Land",    "oracle_text" => "This land enters tapped.", "keywords" => [] }
+          ]
+        }
+      end
+
+      it "delegates to categories for MDFC per-face behavior" do
+        expect(categorizer.all_roles).to eq(categorizer.categories)
+      end
+    end
+  end
 end

@@ -28,6 +28,22 @@ class CardCategorizer
     end
   end
 
+  def all_roles
+    return categories if card_faces.any?
+    return [ "land" ] if land?
+
+    roles = []
+    roles << "ramp"       if ramp?
+    roles << "draw"       if draw?
+    roles << "board_wipe" if board_wipe?
+    roles << "removal"    if removal?
+    roles << "tutor"      if tutor?
+    roles << "protection" if protection?
+    roles << "creature"   if @type_line.include?("Creature")
+    roles << type_fallback if roles.empty?
+    roles
+  end
+
   private
 
   def land?

@@ -33,11 +33,16 @@ RSpec.describe RatioAnalyzer do
 
     describe "actuals" do
       before do
-        create(:deck_card, deck: deck, category: "ramp",     quantity: 5)
-        create(:deck_card, deck: deck, category: "draw",     quantity: 8)
-        create(:deck_card, deck: deck, category: "removal",  quantity: 3)
-        create(:deck_card, deck: deck, category: "land",     quantity: 36)
-        create(:deck_card, deck: deck, category: "creature", quantity: 10)
+        create(:deck_card, deck: deck, category: "ramp",
+               type_line: "Artifact",                     oracle_text: "{T}: Add {C}{C}.",          quantity: 5)
+        create(:deck_card, deck: deck, category: "draw",
+               type_line: "Instant",                      oracle_text: "Draw a card.",               quantity: 8)
+        create(:deck_card, deck: deck, category: "removal",
+               type_line: "Instant",                      oracle_text: "Destroy target creature.",   quantity: 3)
+        create(:deck_card, deck: deck, category: "land",
+               type_line: "Basic Land — Island",          oracle_text: "",                           quantity: 36)
+        create(:deck_card, deck: deck, category: "creature",
+               type_line: "Creature — Human Warrior",     oracle_text: "First strike.",              quantity: 10)
       end
 
       it "counts ramp cards correctly"     do expect(analyzer.report[:ramp][:actual]).to eq(5) end
@@ -47,7 +52,8 @@ RSpec.describe RatioAnalyzer do
       it "counts creature cards correctly" do expect(analyzer.report[:creature][:actual]).to eq(10) end
 
       it "ignores categories not in the five buckets" do
-        create(:deck_card, deck: deck, category: "enchantment", quantity: 5)
+        create(:deck_card, deck: deck, category: "enchantment",
+               type_line: "Enchantment", oracle_text: "Enchanted creature gets +2/+2.", quantity: 5)
         report = analyzer.report
         total = report.values.sum { |d| d[:actual] }
         expect(total).to eq(62)
@@ -56,31 +62,43 @@ RSpec.describe RatioAnalyzer do
 
     describe "quantity summing" do
       it "sums quantity across multiple rows in the same category" do
-        create(:deck_card, deck: deck, card_name: "Island", category: "land", quantity: 26)
-        create(:deck_card, deck: deck, card_name: "Swamp",  category: "land", quantity: 8)
+        create(:deck_card, deck: deck, card_name: "Island", category: "land",
+               type_line: "Basic Land — Island", oracle_text: "", quantity: 26)
+        create(:deck_card, deck: deck, card_name: "Swamp",  category: "land",
+               type_line: "Basic Land — Swamp",  oracle_text: "", quantity: 8)
         expect(analyzer.report[:land][:actual]).to eq(34)
       end
     end
 
-    describe "MDFC secondary categories" do
-      it "counts secondary land category toward land total" do
-        create(:deck_card, deck: deck, category: "removal", secondary_categories: "land", quantity: 2)
+    describe "multi-role single-faced cards" do
+      it "counts a creature with ramp text toward both :creature and :ramp" do
+        create(:deck_card, deck: deck, category: "ramp",
+               type_line: "Creature — Snake Shaman",
+               oracle_text: "Sacrifice this creature: Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
+               quantity: 1)
         report = analyzer.report
-        expect(report[:removal][:actual]).to eq(2)
-        expect(report[:land][:actual]).to eq(2)
-      end
-
-      it "does not double-count when primary and secondary differ" do
-        create(:deck_card, deck: deck, category: "land", secondary_categories: "ramp", quantity: 1)
-        report = analyzer.report
-        expect(report[:land][:actual]).to eq(1)
+        expect(report[:creature][:actual]).to eq(1)
         expect(report[:ramp][:actual]).to eq(1)
       end
 
-      it "ignores blank secondary_categories" do
-        create(:deck_card, deck: deck, category: "land", secondary_categories: nil, quantity: 3)
+      it "counts a creature with removal text toward both :creature and :removal" do
+        create(:deck_card, deck: deck, category: "removal",
+               type_line: "Creature — Elf Shaman",
+               oracle_text: "When this creature enters the battlefield, you may destroy target artifact or enchantment.",
+               quantity: 1)
         report = analyzer.report
-        expect(report[:land][:actual]).to eq(3)
+        expect(report[:creature][:actual]).to eq(1)
+        expect(report[:removal][:actual]).to eq(1)
+      end
+
+      it "counts a non-creature ramp card toward :ramp only" do
+        create(:deck_card, deck: deck, category: "ramp",
+               type_line: "Artifact",
+               oracle_text: "{T}: Add {C}{C}.",
+               quantity: 1)
+        report = analyzer.report
+        expect(report[:ramp][:actual]).to eq(1)
+        expect(report[:creature][:actual]).to eq(0)
       end
     end
 

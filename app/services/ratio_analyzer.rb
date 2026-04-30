@@ -37,15 +37,22 @@ class RatioAnalyzer
   def compute_actuals
     counts = Hash.new(0)
     @deck.deck_cards.each do |dc|
-      bucket = category_to_bucket(dc.category)
-      counts[bucket] += dc.quantity if bucket
-
-      dc.secondary_categories.to_s.split(",").each do |sec_cat|
-        sec_bucket = category_to_bucket(sec_cat.strip)
-        counts[sec_bucket] += dc.quantity if sec_bucket
+      card_hash = build_card_hash(dc)
+      CardCategorizer.new(card_hash).all_roles.each do |role|
+        bucket = category_to_bucket(role)
+        counts[bucket] += dc.quantity if bucket
       end
     end
     counts
+  end
+
+  def build_card_hash(deck_card)
+    {
+      "type_line"   => deck_card.type_line.to_s,
+      "oracle_text" => deck_card.oracle_text.to_s,
+      "keywords"    => Array(deck_card.raw_data&.dig("keywords")),
+      "card_faces"  => Array(deck_card.raw_data&.dig("card_faces"))
+    }
   end
 
   def category_to_bucket(category)
