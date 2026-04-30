@@ -57,10 +57,12 @@ inside array brackets: [ "a", "b" ] not ["a", "b"].
 - Phase 17 complete and merged — Rails 8 authentication, Google SSO, anonymous deck claim flow
 - Phase 17 hotfix 1 (manual) — production migrations had to be run manually via railway ssh after deploy because Rails 8 entrypoint did not run db:prepare on container start
 - Phase 17 hotfix 2 complete and merged — disable Turbo on Google signin button so OAuth POST does a top-level redirect instead of XHR (Turbo's default fetch triggered a CORS preflight that Google rejected with 405)
+- Phase 18 in progress — card image hover-zoom on laptop, tap-to-modal on mobile
+- Phase 18 hotfix: fix add-card-from-search not updating deck card list (deck_cards#create previously returned a suggestions-page-only Turbo Stream that no-op'd on the deck show page; now appends the new card row AND removes any matching suggestion card)
 - Live at https://web-production-aefc3.up.railway.app
-- 541 examples, 0 failures
+- 544 examples, 0 failures
 - CI green
-- Currently on branch: `phase-17-password-visibility-toggle`
+- Currently on branch: `phase-18-hotfix-add-card-from-search`
 
 ## What was built in Phase 17
 - Rails 8 built-in authentication as the foundation (User, Session,
@@ -425,6 +427,26 @@ the demo, click "PUBLISH APP" on the Google Auth Platform > Audience
 page so any Gmail user can sign in. For the basic email/profile
 scopes used here, no Google verification review is required —
 publish is instant.
+
+## What was built in Phase 18 (in progress)
+- Card image hover-zoom on laptop: hovering a card thumbnail in the
+  deck list expands to a full-size overlay via card-magnify Stimulus
+  controller
+- Tap-to-modal on mobile: same controller shows a modal on tap for
+  touch devices, replacing the hover behavior that doesn't exist on
+  mobile
+- Mobile-first header layout on deck show page — buttons wrap and
+  stack correctly on narrow viewports
+- Fixed silent failure when adding a card via the search dropdown on
+  the deck show page. DeckCardsController#create now returns a Turbo
+  Stream that updates the full deck card list (turbo_stream.update
+  "deck_card_list") AND removes any matching suggestion card
+  (turbo_stream.remove "suggestion-{id}"). The same response works on
+  both the deck show page and the suggestions page — the irrelevant
+  action is a no-op on whichever page doesn't have the matching
+  target. Also added @deck.deck_cards.reload in the RecordNotUnique
+  rescue path to clear the unsaved card from the association cache
+  before re-rendering the list.
 
 ## Upcoming phases
 - Phase 18: Suggestion filter polish, combos page improvements

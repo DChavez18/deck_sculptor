@@ -133,6 +133,8 @@ bundle exec brakeman --no-pager
 | 17 hotfix 1 | Manual production migrations via railway ssh |
 | 17 hotfix 2 | Disable Turbo on Google signin button (CORS preflight fix) |
 | 17 polish | Show/hide password toggle on signin and signup |
+| 18 | Card image hover-zoom on laptop, tap-to-modal on mobile |
+| 18 hotfix | Fix add-card-from-search not updating deck list (Turbo Stream targeted suggestions DOM only) |
 
 ## Roadmap
 

@@ -95,6 +95,42 @@ RSpec.describe "DeckCards", type: :request do
       end
     end
 
+    context "when adding from the deck show page via Turbo Stream" do
+      before do
+        allow(scryfall_service).to receive(:find_card_by_id).with("scryfall-123").and_return(card_data)
+      end
+
+      let(:params) { { deck_card: { scryfall_id: "scryfall-123", card_name: "Counterspell", quantity: 1 } } }
+
+      it "returns a Turbo Stream that updates the deck card list" do
+        post deck_deck_cards_path(deck),
+          params: params,
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+        expect(response.body).to include('action="update"')
+        expect(response.body).to include("deck_card_list")
+      end
+
+      it "also includes the remove action for the suggestions page (regression guard)" do
+        post deck_deck_cards_path(deck),
+          params: params,
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        expect(response.body).to include('action="remove"')
+        expect(response.body).to include("suggestion-scryfall-123")
+      end
+
+      it "creates the deck card record" do
+        expect {
+          post deck_deck_cards_path(deck),
+            params: params,
+            headers: { "Accept" => "text/vnd.turbo-stream.html" }
+        }.to change(DeckCard, :count).by(1)
+      end
+    end
+
     context "when adding from the suggestions page via Turbo Stream" do
       before do
         allow(scryfall_service).to receive(:find_card_by_id).with("scryfall-123").and_return(card_data)

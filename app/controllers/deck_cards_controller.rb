@@ -42,7 +42,14 @@ class DeckCardsController < ApplicationController
     if @deck_card.save
       respond_to do |format|
         format.turbo_stream do
-          render turbo_stream: turbo_stream.remove("suggestion-#{card_data['id']}")
+          render turbo_stream: [
+            turbo_stream.update(
+              "deck_card_list",
+              partial: "decks/deck_card_list",
+              locals: { deck: @deck, cards_by_category: @deck.cards_by_category }
+            ),
+            turbo_stream.remove("suggestion-#{card_data['id']}")
+          ]
         end
         format.html do
           if return_to == "suggestions"
@@ -56,9 +63,17 @@ class DeckCardsController < ApplicationController
       redirect_to @deck, alert: @deck_card.errors.full_messages.to_sentence
     end
   rescue ActiveRecord::RecordNotUnique
+    @deck.deck_cards.reload
     respond_to do |format|
       format.turbo_stream do
-        render turbo_stream: turbo_stream.remove("suggestion-#{card_data['id']}")
+        render turbo_stream: [
+          turbo_stream.update(
+            "deck_card_list",
+            partial: "decks/deck_card_list",
+            locals: { deck: @deck, cards_by_category: @deck.cards_by_category }
+          ),
+          turbo_stream.remove("suggestion-#{card_data['id']}")
+        ]
       end
       format.html do
         redirect_to @deck, notice: "#{card_name} is already in your deck."
