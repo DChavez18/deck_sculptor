@@ -62,10 +62,11 @@ inside array brackets: [ "a", "b" ] not ["a", "b"].
 - Phase 18 hotfix: Building Toward panel now counts cards in all roles they fulfill (CardCategorizer#all_roles + RatioAnalyzer re-evaluates from stored oracle text) — creatures that also ramp/draw/remove now count toward both the Creature bucket and the functional bucket
 - Phase 19 complete — fix deck list type grouping in Turbo Stream re-renders (cards_by_type used consistently across all paths)
 - Phase 20 complete — natural language prompt search on suggestions page
+- Phase 20 hotfix complete — Solid Cache/Queue/Cable migrations missing in production; Phase 20 feature was production-broken from merge until this hotfix shipped
 - Live at https://web-production-aefc3.up.railway.app
 - 596 examples, 0 failures
 - CI green
-- Currently on branch: `phase-20-natural-language-suggestions`
+- Currently on branch: `hotfix-solid-cache-migration`
 
 ## What was built in Phase 17
 - Rails 8 built-in authentication as the foundation (User, Session,
@@ -92,9 +93,9 @@ inside array brackets: [ "a", "b" ] not ["a", "b"].
 - Hotfix 1: Rails 8's docker-entrypoint did not run db:prepare on
   server start, so production booted with no users/sessions/decks
   ownership tables. Fix: ran `bin/rails db:migrate` manually inside
-  the Railway container via `railway ssh`. The entrypoint script
-  should be revisited post-MagicCon to make migrations automatic
-  on every deploy.
+  the Railway container via `railway ssh`. The entrypoint was later
+  updated in the Phase 20 Solid Cache hotfix to run db:prepare plus
+  explicit per-database migrate commands on every deploy.
 - Hotfix 2: Turbo Drive intercepted the "Continue with Google"
   button_to form submission and tried to fetch it via XHR, which
   triggered a CORS preflight that Google's OAuth endpoint rejected
@@ -403,12 +404,13 @@ Deployment notes (learned the hard way in Phase 16 hotfix):
 - Dockerfile CMD is `["./bin/rails", "server"]` NOT
   `["./bin/thrust", ...]` — Thruster listens on port 80 and ignores
   Railway's dynamic $PORT, breaking healthchecks. Puma serves directly.
-- Rails 8's default `bin/docker-entrypoint` does NOT run
-  `db:migrate` or `db:prepare` on container start. New migrations
-  must be run manually via `railway ssh` then `bin/rails db:migrate`
-  until the entrypoint is updated. (Future improvement: edit
-  bin/docker-entrypoint to run migrations before exec'ing the
-  server command.)
+- `bin/docker-entrypoint` runs `db:prepare` (primary database) followed
+  by explicit `db:migrate:cache db:migrate:queue db:migrate:cable` for
+  the three secondary logical databases. All four commands run on every
+  deploy; they are idempotent so no manual `railway ssh` intervention is
+  needed for migrations. See "Solid Cache / Solid Queue / Solid Cable
+  migration hotfix" section for why the explicit secondary commands are
+  required rather than relying on `db:prepare` alone.
 - Turbo Drive intercepts form submissions and submits via fetch.
   For OAuth flows where the form must do a top-level redirect to a
   third party, add `data: { turbo: false }` to the form/button to
@@ -535,12 +537,91 @@ publish is instant.
   category pills and name search (Stimulus) apply on top client-side.
   Logical AND. The two layers don't interfere.
 - 596 examples, 0 failures
+- NOTE: Phase 20 was production-broken from the moment of merge until
+  the Solid Cache hotfix below shipped. Every NL prompt submission
+  crashed with PG::UndefinedTable: relation "solid_cache_entries" does
+  not exist. Local dev and CI were unaffected (dev uses :memory_store,
+  tests use :null_store). See hotfix section below for root cause.
+
+## Solid Cache / Solid Queue / Solid Cable migration hotfix
+
+### Bug
+Phase 20 crashed on every NL prompt submission in production:
+```
+PG::UndefinedTable: ERROR: relation "solid_cache_entries" does not exist
+app/services/nl_prompt_parser_service.rb:15:in 'parse'
+```
+Solid Queue and Solid Cable would have failed similarly the moment any
+background job or Action Cable message was sent.
+
+### Root cause — Rails 8.1 multi-database footgun
+The app uses a single physical PostgreSQL server for all four logical
+databases (primary, cache, queue, cable). All four inherit from the same
+`DATABASE_URL` in `config/database.yml`. Each has its own `migrations_paths`
+(`db/migrate`, `db/cache_migrate`, `db/queue_migrate`, `db/cable_migrate`)
+but they share a single physical schema.
+
+The Rails install generators for Solid Cache, Solid Queue, and Solid Cable
+only copy schema files (`db/cache_schema.rb`, `db/queue_schema.rb`,
+`db/cable_schema.rb`) — they do NOT generate migration files or create the
+migration directories. Schema files are only useful with `db:schema:load`.
+
+Rails 8.1's `db:prepare` calls `initialize_database` for each configured
+logical database. `initialize_database` checks whether `schema_migrations`
+already exists on the connection to decide whether to load the schema. Because
+the `schema_migrations` table is shared across all four connections (same
+physical DB), once primary is set up the secondaries all see `schema_migrations`
+as existing — so `db:prepare` marks them as "already initialised" and skips
+schema loading for them entirely. With no migration files in the secondary
+directories and schema loading skipped, none of the Solid tables were ever
+created.
+
+Local dev was unaffected: `development:` in `config/database.yml` is a
+single-database config (no cache/queue/cable entries), so dev uses
+`:memory_store` for cache and `:async` for queue. Tests use `:null_store`.
+Neither path touches the `solid_cache_entries` table. CI was always green.
+
+### Fix
+- Added migration files in the three secondary directories:
+  - `db/cache_migrate/20260508000001_create_solid_cache_entries.rb`
+  - `db/queue_migrate/20260508000002_create_solid_queue_tables.rb`
+  - `db/cable_migrate/20260508000003_create_solid_cable_messages.rb`
+- Timestamps are sequential (000001/2/3) to avoid version collisions.
+  Because all four logical databases share one `schema_migrations` table,
+  migration version numbers must be globally unique across ALL migration
+  directories. Using the same timestamp in multiple directories would cause
+  later migrations to be silently skipped (they appear already-run in the
+  shared `schema_migrations`).
+- Updated `bin/docker-entrypoint` to run per-database migrate commands
+  after `db:prepare`. `db:prepare` handles the primary database; the
+  explicit `db:migrate:cache db:migrate:queue db:migrate:cable` commands
+  guarantee the secondaries are always migrated. They are idempotent —
+  no-ops when all migrations are current.
+
+### Why both schema files AND migration files are needed
+The schema files (`db/cache_schema.rb` etc.) are used only by `db:schema:load`
+to set up a brand-new database from scratch. Migration files in the secondary
+directories are used by `db:migrate` and `db:prepare`'s migration path for
+incremental deploys. In this shared-physical-DB setup you need BOTH: schema
+files for greenfield (though `db:prepare` will fall through to the migration
+path anyway since schema loading is skipped), and migration files for every
+deploy — including the first one, since schema loading is bypassed.
+
+### What was verified locally
+Created a throwaway database (`deck_sculptor_solidcache_test`) and ran:
+```
+RAILS_ENV=production DATABASE_URL=postgres://localhost/deck_sculptor_solidcache_test \
+  bin/rails db:prepare
+bin/rails db:migrate:cache db:migrate:queue db:migrate:cable
+```
+Confirmed all 13 tables were created (`solid_cache_entries`, 11
+`solid_queue_*` tables, `solid_cable_messages`). Confirmed subsequent
+runs of the explicit migrate commands are clean no-ops. Full suite:
+596 examples, 0 failures.
 
 ## Upcoming phases
 - Phase 21: Suggestion filter polish, combos page improvements
   (target: post-MagicCon)
-- Polish bin/docker-entrypoint to run migrations automatically on
-  deploy (post-MagicCon)
 - Custom domain (decksculptor.com is squatted; revisit post-MagicCon)
 - Email verification, password reset UI promotion, profile editing
   (intentionally out of scope for MagicCon)

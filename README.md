@@ -137,8 +137,10 @@ bundle exec brakeman --no-pager
 | 18 hotfix | Fix add-card-from-search not updating deck list (Turbo Stream targeted suggestions DOM only) |
 | 18 hotfix | Building Toward panel now counts cards in every role they fulfill — creatures that ramp/draw/remove count toward both Creature and the functional bucket |
 | 19 | Fix deck list type grouping in Turbo Stream re-renders — card add, quantity update, and bulk import all now group by card type (not functional role), consistent with the initial page load |
+| 20 | Natural language prompt search on suggestions page (NL → Claude API → FilterSpec → SuggestionFilter) |
+| 20 hotfix | Solid Cache/Queue/Cable migrations missing in production — Phase 20 crashed on every NL prompt with PG::UndefinedTable; installed migration files and updated `bin/docker-entrypoint` to run per-database migrate commands on every deploy |
 
 ## Roadmap
 
-- **Phase 20 — Suggestion polish:** Refined suggestion filters and improved combos page (MagicCon shipped May 1 — targeting next)
-- **Post-MagicCon:** Functional-role filter UI for deck card list (right home for all_roles data), automatic migrations in deploy entrypoint, custom domain, password reset UI, profile editing
+- **Phase 21 — Suggestion polish:** Refined suggestion filters and improved combos page (targeting post-MagicCon)
+- **Post-MagicCon:** Functional-role filter UI for deck card list (right home for all_roles data), custom domain, password reset UI, profile editing
