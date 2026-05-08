@@ -68,16 +68,55 @@
   </div>
 <% else %>
   <div data-controller="suggestion-filter">
-    <%# Filter bar %>
+    <%# Natural language prompt bar %>
+    <div class="mb-4" data-controller="nl-prompt">
+      <%= form_with url: filter_suggestions_deck_path(@deck), method: :post,
+                    data: { nl_prompt_target: "form" } do |f| %>
+        <div class="flex gap-2 items-center">
+          <%= f.text_field :nl_prompt,
+              placeholder: 'Try "show me only elves" or "cards like Sol Ring"…',
+              autocomplete: "off",
+              data: {
+                "nl-prompt-target": "input",
+                action: "input->nl-prompt#updateClearVisibility"
+              },
+              class: "flex-1 bg-slate-800 border border-slate-600 text-slate-200 text-sm
+                      placeholder-slate-500 rounded-lg px-3 py-2
+                      focus:outline-none focus:border-blue-500 min-w-0" %>
+
+          <button type="button"
+                  aria-label="Clear filter"
+                  data-nl-prompt-target="clearBtn"
+                  data-action="click->nl-prompt#clear"
+                  class="hidden text-slate-400 hover:text-white text-xl leading-none px-1 transition-colors">
+            &times;
+          </button>
+
+          <button type="submit"
+                  data-nl-prompt-target="submitBtn"
+                  class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium
+                         px-4 py-2 rounded-lg transition-colors whitespace-nowrap
+                         disabled:opacity-50 disabled:cursor-not-allowed">
+            Search
+          </button>
+
+          <span data-nl-prompt-target="spinner" class="hidden text-slate-400 text-sm whitespace-nowrap">
+            Searching&hellip;
+          </span>
+        </div>
+      <% end %>
+    </div>
+
+    <%# Category filter pills and name search %>
     <div class="flex flex-wrap items-center gap-2 mb-4">
       <% [
-        ["all",     "All"],
-        ["draw",    "Card Draw"],
-        ["ramp",    "Ramp"],
-        ["removal", "Removal"],
-        ["board_wipe", "Board Wipes"],
-        ["land",    "Lands"],
-        ["combo",   "Combos"]
+        [ "all",       "All" ],
+        [ "draw",      "Card Draw" ],
+        [ "ramp",      "Ramp" ],
+        [ "removal",   "Removal" ],
+        [ "board_wipe","Board Wipes" ],
+        [ "land",      "Lands" ],
+        [ "combo",     "Combos" ]
       ].each_with_index do |(value, label), i| %>
         <button type="button"
                 data-suggestion-filter-target="pill"
@@ -97,9 +136,10 @@
 
     <%# Card grid %>
     <div id="suggestions-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-      <% @displayed_suggestions.each do |suggestion| %>
-        <%= render "decks/suggestion_card", suggestion: suggestion, deck: @deck, feedbacks: @feedbacks %>
-      <% end %>
+      <%= render "decks/suggestions_grid_content",
+                 displayed_suggestions: @displayed_suggestions,
+                 deck: @deck,
+                 feedbacks: @feedbacks %>
     </div>
 
     <% if @suggestions.size > 30 %>
