@@ -9,6 +9,18 @@ fi
 # If running the rails server then create or migrate existing database
 if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
   ./bin/rails db:prepare
+
+  # Rails 8.1 multi-database footgun: the cache, queue, and cable logical databases
+  # all share the same physical Postgres server as primary (same DATABASE_URL, different
+  # migrations_paths). db:prepare calls schema_migration.table_exists? on each connection
+  # to decide whether to load the schema. Because schema_migrations is a shared table on
+  # the one physical DB, it already exists after primary is set up — so db:prepare sees
+  # the secondaries as "already initialised" and skips schema loading for them entirely.
+  # Pending migrations in db/cache_migrate/, db/queue_migrate/, db/cable_migrate/ are
+  # still discovered and run by db:prepare, but we run them explicitly here as
+  # belt-and-suspenders to guarantee the secondaries are never silently left unmigrated.
+  # These commands are idempotent — no-ops when all migrations are already current.
+  ./bin/rails db:migrate:cache db:migrate:queue db:migrate:cable
 fi
 
 exec "${@}"
