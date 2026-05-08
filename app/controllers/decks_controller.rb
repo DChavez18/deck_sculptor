@@ -1,7 +1,9 @@
 class DecksController < ApplicationController
   allow_unauthenticated_access
 
-  before_action :set_deck, only: [ :show, :edit, :update, :destroy, :suggestions, :more_suggestions, :analysis, :intent, :save_intent, :export, :cards_by_category ]
+  before_action :set_deck, only: [ :show, :edit, :update, :destroy, :suggestions, :more_suggestions,
+                                   :filter_suggestions, :analysis, :intent, :save_intent, :export,
+                                   :cards_by_category ]
 
   CATEGORY_LABELS = {
     "land"         => "Land",
@@ -83,6 +85,8 @@ class DecksController < ApplicationController
   end
 
   def suggestions
+    nl_filter_specs.delete(@deck.id.to_s)
+
     commander_suggestions = SuggestionEngine.new(@deck).suggestions
     intent_suggestions    = IntentEngine.new(@deck).suggestions
 
@@ -94,12 +98,53 @@ class DecksController < ApplicationController
     @feedbacks             = @deck.suggestion_feedbacks.index_by(&:scryfall_id)
   end
 
+  def filter_suggestions
+    prompt      = params[:nl_prompt].to_s.strip
+    filter_spec = prompt.present? ? NlPromptParserService.new(prompt).parse : nil
+
+    nl_filter_specs[@deck.id.to_s] = filter_spec
+    nl_filter_specs.delete(@deck.id.to_s) if filter_spec.nil?
+
+    commander_suggestions = SuggestionEngine.new(@deck).suggestions
+    intent_suggestions    = IntentEngine.new(@deck).suggestions
+
+    base = merge_suggestions(commander_suggestions, intent_suggestions)
+             .reject { |s| blacklisted?(s, @deck) }
+
+    @suggestions           = SuggestionFilter.new(base, filter_spec).apply
+    @displayed_suggestions = @suggestions.first(30)
+    @feedbacks             = @deck.suggestion_feedbacks.index_by(&:scryfall_id)
+
+    streams = [
+      turbo_stream.update(
+        "suggestions-grid",
+        partial: "decks/suggestions_grid_content",
+        locals:  { displayed_suggestions: @displayed_suggestions, deck: @deck, feedbacks: @feedbacks }
+      )
+    ]
+
+    if @suggestions.size > 30
+      streams << turbo_stream.replace(
+        "load-more-btn",
+        partial: "decks/load_more_button",
+        locals:  { deck: @deck, next_page: 2 }
+      )
+    else
+      streams << turbo_stream.remove("load-more-btn")
+    end
+
+    render turbo_stream: streams
+  end
+
   def more_suggestions
     commander_suggestions = SuggestionEngine.new(@deck).suggestions
     intent_suggestions    = IntentEngine.new(@deck).suggestions
 
-    all_suggestions = merge_suggestions(commander_suggestions, intent_suggestions)
-      .reject { |s| blacklisted?(s, @deck) }
+    base = merge_suggestions(commander_suggestions, intent_suggestions)
+             .reject { |s| blacklisted?(s, @deck) }
+
+    filter_spec     = nl_filter_specs[@deck.id.to_s]
+    all_suggestions = SuggestionFilter.new(base, filter_spec).apply
 
     page  = [ params[:page].to_i, 1 ].max
     start = (page - 1) * 30
@@ -183,6 +228,10 @@ class DecksController < ApplicationController
 
   def merge_suggestions(commander, intent)
     MergeSuggestions.new(commander, intent).call
+  end
+
+  def nl_filter_specs
+    session[:nl_filter_specs] ||= {}
   end
 
   def deck_scope

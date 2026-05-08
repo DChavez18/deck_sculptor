@@ -17,6 +17,7 @@ Rails.application.routes.draw do
     member do
       get  :suggestions
       get  :more_suggestions
+      post :filter_suggestions
       get  :analysis
       get  :intent
       post :save_intent

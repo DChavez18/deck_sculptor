@@ -61,10 +61,11 @@ inside array brackets: [ "a", "b" ] not ["a", "b"].
 - Phase 18 hotfix: fix add-card-from-search not updating deck card list (deck_cards#create previously returned a suggestions-page-only Turbo Stream that no-op'd on the deck show page; now appends the new card row AND removes any matching suggestion card)
 - Phase 18 hotfix: Building Toward panel now counts cards in all roles they fulfill (CardCategorizer#all_roles + RatioAnalyzer re-evaluates from stored oracle text) — creatures that also ramp/draw/remove now count toward both the Creature bucket and the functional bucket
 - Phase 19 complete — fix deck list type grouping in Turbo Stream re-renders (cards_by_type used consistently across all paths)
+- Phase 20 complete — natural language prompt search on suggestions page
 - Live at https://web-production-aefc3.up.railway.app
-- 554 examples, 0 failures
+- 596 examples, 0 failures
 - CI green
-- Currently on branch: `phase-19-deck-list-type-grouping`
+- Currently on branch: `phase-20-natural-language-suggestions`
 
 ## What was built in Phase 17
 - Rails 8 built-in authentication as the foundation (User, Session,
@@ -487,11 +488,71 @@ publish is instant.
   filter UI to the deck card list (the right home for all_roles data),
   at which point the Top Category stat can be reconsidered or removed.
 
+## What was built in Phase 20
+- Natural language prompt bar above the filter pills on the suggestions
+  page. User types "show me only elves", "cards like Sol Ring", or
+  "cards that combo with Thassa's Oracle" and hits Enter or Search.
+- NlPromptParserService — calls Claude API (claude-sonnet-4-20250514,
+  max 256 tokens) with a structured system prompt. Returns ONLY JSON
+  (no prose). Parsed FilterSpec hash keys: filter_type (type/similarity/
+  combo), types, subtypes, colors, max_cmc, min_cmc, keywords,
+  reference_card. Caches by SHA256(prompt.downcase), 5-minute TTL via
+  Solid Cache. On API error or JSON parse failure returns nil (no filter
+  applied). Reuses same HTTParty + credentials pattern as AiAdvisorService.
+- SuggestionFilter — applies FilterSpec to the already-scored suggestion
+  pool (plain Ruby, no AR queries, no API calls for type filter):
+  - "type" filter: AND-chains all present spec fields (subtypes, types,
+    colors, CMC range, keywords) against card["type_line"] /
+    card["color_identity"] / card["cmc"] / card["keywords"]
+  - "similarity" filter: score-based with threshold 2 of 4 signals
+    (subtype overlap, keyword overlap, CMC ±2, color overlap). Tests
+    pinned with Sol Ring, Lightning Bolt, and Rhystic Study as canonical
+    cases. One Scryfall lookup for the reference card (cached).
+  - "combo" filter: ComboFinderService.find_combos([reference_card])
+    → keeps suggestion-pool cards that appear as combo partners. Reuses
+    existing Commander Spellbook integration with no new infrastructure.
+  - nil spec → returns all suggestions unchanged
+- DecksController#filter_suggestions (POST member route):
+  - Empty prompt: clears session key, returns full unfiltered pool
+  - Non-empty: parses → filters → responds with Turbo Stream updating
+    #suggestions-grid + replacing/removing #load-more-btn
+  - Session key scoped by deck_id: session[:nl_filter_specs][deck_id].
+    Prevents filter from leaking to other decks in the same tab session.
+    Known acceptable edge case: same deck open in two tabs shares state.
+- DecksController#suggestions GET: clears the session key for this deck,
+  so a fresh page load always starts unfiltered.
+- DecksController#more_suggestions: reads session filter spec and applies
+  it via SuggestionFilter so pagination respects an active NL filter.
+- _suggestions_grid_content.html.erb partial extracted so both the full
+  page render and Turbo Stream turbo_stream.update share the same template.
+- nl_prompt_controller.js Stimulus controller: form, input, spinner,
+  clearBtn, submitBtn targets. Listens to turbo:submit-start/end on the
+  form target for loading state. clear() empties input and requestSubmit()s.
+  updateClearVisibility() shows/hides × button. No querySelector by class;
+  all DOM access via data-* targets. Single responsibility. 1-line comment
+  notes no JS test suite yet; written to be testable when one is added.
+- Filter composition: NL filter narrows pool server-side; existing
+  category pills and name search (Stimulus) apply on top client-side.
+  Logical AND. The two layers don't interfere.
+- 596 examples, 0 failures
+
 ## Upcoming phases
-- Phase 20: Suggestion filter polish, combos page improvements
+- Phase 21: Suggestion filter polish, combos page improvements
   (target: post-MagicCon)
 - Polish bin/docker-entrypoint to run migrations automatically on
   deploy (post-MagicCon)
 - Custom domain (decksculptor.com is squatted; revisit post-MagicCon)
 - Email verification, password reset UI promotion, profile editing
   (intentionally out of scope for MagicCon)
+
+## Phase 20 NL prompt — out of scope for v1 (future work)
+- Saved prompts / prompt history
+- "Cheap removal" / "low CMC ramp" fuzzy-role queries (would need
+  all_roles integration on the suggestion candidate pool — separate phase)
+- "Budget alternatives to X" (price data not currently stored)
+- Conversational follow-up ("now narrow to under $5") — v1 is single-shot
+- "Combos with X" returning full combo chains rather than partner cards
+  only (Commander Spellbook data already available; just needs a richer
+  result display)
+- Upgrading "cards like X" from subtype+CMC+keyword scoring (Option 1)
+  to shared oracle tag matching (Option 2) for better abstract similarity

@@ -307,6 +307,120 @@ RSpec.describe "Decks", type: :request do
   end
 
 
+  describe "POST /decks/:id/filter_suggestions" do
+    let(:suggestion_engine) { instance_double(SuggestionEngine, suggestions: []) }
+    let(:intent_engine)     { instance_double(IntentEngine, suggestions: []) }
+    let(:turbo_headers)     { { "Accept" => "text/vnd.turbo-stream.html" } }
+
+    def make_suggestion(id, type_line: "Creature — Elf", name: "Card #{id}")
+      { card: { "id" => id, "name" => name, "type_line" => type_line, "cmc" => 2.0,
+                "color_identity" => [ "G" ], "keywords" => [], "oracle_text" => "", "image_uris" => {} },
+        score: 5, reasons: [], pool: "Ramp" }
+    end
+
+    let(:elf_suggestion)      { make_suggestion("elf-1",      type_line: "Creature — Elf",    name: "Llanowar Elves") }
+    let(:non_elf_suggestion)  { make_suggestion("instant-1",  type_line: "Instant",            name: "Counterspell") }
+    let(:all_suggestions)     { [ elf_suggestion, non_elf_suggestion ] }
+    let(:merge_instance)      { instance_double(MergeSuggestions, call: all_suggestions) }
+    let(:nl_parser)           { instance_double(NlPromptParserService) }
+
+    before do
+      allow(SuggestionEngine).to receive(:new).and_return(suggestion_engine)
+      allow(IntentEngine).to receive(:new).and_return(intent_engine)
+      allow(MergeSuggestions).to receive(:new).and_return(merge_instance)
+      allow(NlPromptParserService).to receive(:new).and_return(nl_parser)
+    end
+
+    context "when the parser returns an Elf subtype filter" do
+      before do
+        allow(nl_parser).to receive(:parse).and_return(
+          { "filter_type" => "type", "subtypes" => [ "Elf" ] }
+        )
+        post filter_suggestions_deck_path(deck),
+             params: { nl_prompt: "show me only elves" },
+             headers: turbo_headers
+      end
+
+      it "responds with a Turbo Stream" do
+        expect(response).to have_http_status(:ok)
+        expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      end
+
+      it "updates the suggestions-grid with only the Elf card" do
+        expect(response.body).to include("elf-1")
+        expect(response.body).to include("suggestions-grid")
+      end
+
+      it "excludes the non-Elf card from the response" do
+        expect(response.body).not_to include("instant-1")
+      end
+    end
+
+    context "when the parser returns nil (API failure)" do
+      before do
+        allow(nl_parser).to receive(:parse).and_return(nil)
+        post filter_suggestions_deck_path(deck),
+             params: { nl_prompt: "show me elves" },
+             headers: turbo_headers
+      end
+
+      it "returns all suggestions unfiltered" do
+        expect(response.body).to include("elf-1")
+        expect(response.body).to include("instant-1")
+      end
+    end
+
+    context "when the prompt is blank" do
+      before do
+        post filter_suggestions_deck_path(deck),
+             params: { nl_prompt: "" },
+             headers: turbo_headers
+      end
+
+      it "does not call NlPromptParserService" do
+        expect(NlPromptParserService).not_to have_received(:new)
+      end
+
+      it "returns all suggestions unfiltered" do
+        expect(response.body).to include("elf-1")
+        expect(response.body).to include("instant-1")
+      end
+    end
+
+    context "session scoping" do
+      let(:other_commander) { create(:commander, name: "Other Commander") }
+      let(:other_deck) do
+        create(:deck, :owned_by_user, user: user, commander: other_commander)
+      end
+
+      before do
+        allow(nl_parser).to receive(:parse).and_return(
+          { "filter_type" => "type", "subtypes" => [ "Elf" ] }
+        )
+        post filter_suggestions_deck_path(deck),
+             params: { nl_prompt: "show me only elves" },
+             headers: turbo_headers
+      end
+
+      it "a subsequent GET suggestions for a different deck clears that deck key, not this one" do
+        edhrec_service = instance_double(EdhrecService, top_cards: [])
+        allow(EdhrecService).to receive(:new).and_return(edhrec_service)
+
+        get suggestions_deck_path(other_deck)
+
+        # Posting to deck again should still use the stored spec (not cleared)
+        allow(nl_parser).to receive(:parse).and_return(
+          { "filter_type" => "type", "subtypes" => [ "Elf" ] }
+        )
+        post filter_suggestions_deck_path(deck),
+             params: { nl_prompt: "show me only elves" },
+             headers: turbo_headers
+        expect(response.body).to include("elf-1")
+        expect(response.body).not_to include("instant-1")
+      end
+    end
+  end
+
   describe "GET /decks/:id/analysis" do
     let(:combo_service) { instance_double(ComboFinderService, find_combos: [], near_miss_combos: []) }
 
