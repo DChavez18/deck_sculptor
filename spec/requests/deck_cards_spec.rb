@@ -203,6 +203,34 @@ RSpec.describe "DeckCards", type: :request do
     end
   end
 
+  describe "POST /decks/:deck_id/deck_cards — deck card list groups by card type" do
+    let(:bloom_tender_data) do
+      {
+        "id"             => "bloom-tender-abc",
+        "name"           => "Bloom Tender",
+        "type_line"      => "Legendary Creature — Elf Druid",
+        "mana_cost"      => "{1}{G}",
+        "cmc"            => 2.0,
+        "color_identity" => [ "G" ],
+        "oracle_text"    => "{T}: For each color among permanents you control, add one mana of that color.",
+        "image_uris"     => { "normal" => "https://cards.scryfall.io/normal/front/bloom.jpg" }
+      }
+    end
+
+    before do
+      allow(scryfall_service).to receive(:find_card_by_id).with("bloom-tender-abc").and_return(bloom_tender_data)
+    end
+
+    it "renders Bloom Tender under the Creature section header, not Ramp" do
+      post deck_deck_cards_path(deck),
+        params: { deck_card: { scryfall_id: "bloom-tender-abc", card_name: "Bloom Tender", quantity: 1 } },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response.body).to match(%r{<h3[^>]*>\s*Creature\s*</h3>}i)
+      expect(response.body).not_to match(%r{<h3[^>]*>\s*Ramp\s*</h3>}i)
+    end
+  end
+
   describe "POST /decks/:deck_id/deck_cards — MDFC card" do
     let(:mdfc_data) do
       {
@@ -298,6 +326,26 @@ RSpec.describe "DeckCards", type: :request do
         expect(response).to redirect_to(deck_path(deck))
         follow_redirect!
         expect(response.body).to include("Non-basic cards are limited to 1 copy")
+      end
+    end
+
+    context "Turbo Stream response groups by card type (not functional role)" do
+      let!(:bloom_tender) do
+        create(:deck_card, deck: deck,
+               card_name: "Bloom Tender",
+               scryfall_id: "bloom-tender-xyz",
+               category: "ramp",
+               type_line: "Legendary Creature — Elf Druid",
+               quantity: 1)
+      end
+
+      it "renders Bloom Tender under the Creature section header, not Ramp, after quantity update" do
+        patch deck_deck_card_path(deck, bloom_tender),
+          params: { deck_card: { quantity: 1 } },
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+        expect(response.body).to match(%r{<h3[^>]*>\s*Creature\s*</h3>}i)
+        expect(response.body).not_to match(%r{<h3[^>]*>\s*Ramp\s*</h3>}i)
       end
     end
   end

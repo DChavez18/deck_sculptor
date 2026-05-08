@@ -46,7 +46,7 @@ class DeckCardsController < ApplicationController
             turbo_stream.update(
               "deck_card_list",
               partial: "decks/deck_card_list",
-              locals: { deck: @deck, cards_by_category: @deck.cards_by_category }
+              locals: { deck: @deck, grouped_cards: @deck.cards_by_type }
             ),
             turbo_stream.remove("suggestion-#{card_data['id']}")
           ]
@@ -70,7 +70,7 @@ class DeckCardsController < ApplicationController
           turbo_stream.update(
             "deck_card_list",
             partial: "decks/deck_card_list",
-            locals: { deck: @deck, cards_by_category: @deck.cards_by_category }
+            locals: { deck: @deck, grouped_cards: @deck.cards_by_type }
           ),
           turbo_stream.remove("suggestion-#{card_data['id']}")
         ]

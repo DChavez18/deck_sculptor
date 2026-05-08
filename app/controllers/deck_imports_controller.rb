@@ -60,7 +60,7 @@ class DeckImportsController < ApplicationController
     render turbo_stream: [
       turbo_stream.replace("deck_card_list",
         partial: "decks/deck_card_list",
-        locals: { cards_by_category: @deck.cards_by_category, deck: @deck }),
+        locals: { grouped_cards: @deck.cards_by_type, deck: @deck }),
       turbo_stream.update("deck-progress",
         partial: "decks/deck_stats",
         locals: { deck: @deck }),

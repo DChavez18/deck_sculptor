@@ -1,5 +1,5 @@
 <% type_labels = Deck::TYPE_LABELS %>
-<% if cards_by_category.empty? %>
+<% if grouped_cards.empty? %>
   <div class="text-center py-16 border border-dashed border-slate-600 rounded-xl">
     <p class="text-slate-400">No cards added yet.</p>
     <p class="text-slate-500 text-sm mt-1">Use the form above to add cards to your deck.</p>
@@ -19,7 +19,7 @@
       </button>
     </div>
     <div class="space-y-4">
-    <% cards_by_category.each_with_index do |(category, cards), idx| %>
+    <% grouped_cards.each_with_index do |(category, cards), idx| %>
       <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
         <div class="px-5 py-3 bg-slate-750 border-b border-slate-700 flex items-center justify-between cursor-pointer select-none"
              onclick="(function(el){var body=el.closest('.bg-slate-800').querySelector('.category-body');var chevron=el.querySelector('.chevron');var collapsed=body.style.display==='none';body.style.display=collapsed?'':'none';chevron.style.transform=collapsed?'':'rotate(-90deg)'})(this)">

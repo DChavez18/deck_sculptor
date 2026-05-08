@@ -136,8 +136,9 @@ bundle exec brakeman --no-pager
 | 18 | Card image hover-zoom on laptop, tap-to-modal on mobile |
 | 18 hotfix | Fix add-card-from-search not updating deck list (Turbo Stream targeted suggestions DOM only) |
 | 18 hotfix | Building Toward panel now counts cards in every role they fulfill — creatures that ramp/draw/remove count toward both Creature and the functional bucket |
+| 19 | Fix deck list type grouping in Turbo Stream re-renders — card add, quantity update, and bulk import all now group by card type (not functional role), consistent with the initial page load |
 
 ## Roadmap
 
-- **Phase 18 — Suggestion polish:** Refined suggestion filters and improved combos page (target: post-MagicCon May 1)
-- **Post-MagicCon:** Automatic migrations in deploy entrypoint, custom domain (decksculptor.com pending), password reset UI, profile editing
+- **Phase 20 — Suggestion polish:** Refined suggestion filters and improved combos page (MagicCon shipped May 1 — targeting next)
+- **Post-MagicCon:** Functional-role filter UI for deck card list (right home for all_roles data), automatic migrations in deploy entrypoint, custom domain, password reset UI, profile editing

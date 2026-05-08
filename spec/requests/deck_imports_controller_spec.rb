@@ -104,6 +104,33 @@ RSpec.describe "DeckImports", type: :request do
       end
     end
 
+    context "deck card list groups by card type (not functional role)" do
+      let(:bloom_tender_data) do
+        {
+          "id"             => "bloom-tender-import",
+          "name"           => "Bloom Tender",
+          "type_line"      => "Legendary Creature — Elf Druid",
+          "cmc"            => 2.0,
+          "color_identity" => [ "G" ],
+          "oracle_text"    => "{T}: For each color among permanents you control, add one mana of that color.",
+          "image_uris"     => { "normal" => "https://cards.scryfall.io/normal/front/bloom.jpg" }
+        }
+      end
+
+      before do
+        allow(scryfall_service).to receive(:find_card_by_name).with("Bloom Tender").and_return(bloom_tender_data)
+      end
+
+      it "renders Bloom Tender under the Creature section header, not Ramp" do
+        post deck_deck_imports_path(deck),
+             params: { decklist: "1 Bloom Tender" },
+             headers: turbo_headers
+
+        expect(response.body).to match(%r{<h3[^>]*>\s*Creature\s*</h3>}i)
+        expect(response.body).not_to match(%r{<h3[^>]*>\s*Ramp\s*</h3>}i)
+      end
+    end
+
     context "when importing a card with quantity > 1" do
       before do
         allow(scryfall_service).to receive(:find_card_by_name).with("Island").and_return(

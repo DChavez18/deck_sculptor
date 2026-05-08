@@ -57,13 +57,14 @@ inside array brackets: [ "a", "b" ] not ["a", "b"].
 - Phase 17 complete and merged — Rails 8 authentication, Google SSO, anonymous deck claim flow
 - Phase 17 hotfix 1 (manual) — production migrations had to be run manually via railway ssh after deploy because Rails 8 entrypoint did not run db:prepare on container start
 - Phase 17 hotfix 2 complete and merged — disable Turbo on Google signin button so OAuth POST does a top-level redirect instead of XHR (Turbo's default fetch triggered a CORS preflight that Google rejected with 405)
-- Phase 18 in progress — card image hover-zoom on laptop, tap-to-modal on mobile
+- Phase 18 complete and merged — card image hover-zoom on laptop, tap-to-modal on mobile
 - Phase 18 hotfix: fix add-card-from-search not updating deck card list (deck_cards#create previously returned a suggestions-page-only Turbo Stream that no-op'd on the deck show page; now appends the new card row AND removes any matching suggestion card)
 - Phase 18 hotfix: Building Toward panel now counts cards in all roles they fulfill (CardCategorizer#all_roles + RatioAnalyzer re-evaluates from stored oracle text) — creatures that also ramp/draw/remove now count toward both the Creature bucket and the functional bucket
+- Phase 19 complete — fix deck list type grouping in Turbo Stream re-renders (cards_by_type used consistently across all paths)
 - Live at https://web-production-aefc3.up.railway.app
-- 551 examples, 0 failures
+- 554 examples, 0 failures
 - CI green
-- Currently on branch: `phase-18-building-toward-counts`
+- Currently on branch: `phase-19-deck-list-type-grouping`
 
 ## What was built in Phase 17
 - Rails 8 built-in authentication as the foundation (User, Session,
@@ -460,8 +461,34 @@ publish is instant.
   to use primary category only so cards don't appear in multiple
   deck list sections.
 
+## What was built in Phase 19
+- Fixed deck list type grouping regression in all Turbo Stream re-render
+  paths. On first load, DecksController#show correctly called
+  @deck.cards_by_type. But three paths that re-render the
+  _deck_card_list partial via Turbo Stream were still passing
+  @deck.cards_by_category (functional roles), causing the list to flip
+  to Ramp / Removal / Draw section headers after any card add, quantity
+  update, or bulk import:
+    - DeckCardsController#create success and RecordNotUnique rescue paths
+    - deck_cards/update.turbo_stream.erb
+    - DeckImportsController#create
+  Fix: all three now pass @deck.cards_by_type. cards_by_category and
+  all_roles are untouched — the analysis page and Building Toward panel
+  continue to use functional categories exactly as before.
+- Contract tests added using Bloom Tender (Creature that fulfills ramp
+  role) as the canonical case: the Turbo Stream response for create,
+  update, and import must render a "Creature" section header and must
+  not render a "Ramp" section header.
+- Known follow-up: _deck_stats.html.erb:29 shows a "Top Category"
+  quick stat that calls deck.cards_by_category directly, so the show
+  page displays a functional label ("ramp", "draw") in that one stat
+  while the card list groups by structural type. This inconsistency is
+  intentional for now — a future phase will add a functional-role
+  filter UI to the deck card list (the right home for all_roles data),
+  at which point the Top Category stat can be reconsidered or removed.
+
 ## Upcoming phases
-- Phase 18: Suggestion filter polish, combos page improvements
+- Phase 20: Suggestion filter polish, combos page improvements
   (target: post-MagicCon)
 - Polish bin/docker-entrypoint to run migrations automatically on
   deploy (post-MagicCon)
