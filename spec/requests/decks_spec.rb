@@ -195,6 +195,14 @@ RSpec.describe "Decks", type: :request do
       it "does not show the load more button" do
         expect(response.body).not_to include("load-more-btn")
       end
+
+      it "renders the Reset filters button wired to suggestion-filter#reset" do
+        expect(response.body).to match(/<button[^>]*data-action="[^"]*suggestion-filter#reset[^"]*"/)
+      end
+
+      it "renders the Reset button disabled by default (no filters active on initial render)" do
+        expect(response.body).to match(/<button(?=[^>]*\bdisabled\b)(?=[^>]*data-suggestion-filter-target="resetBtn")/)
+      end
     end
 
     context "when a card uses scryfall_id key instead of id" do

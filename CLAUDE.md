@@ -63,10 +63,11 @@ inside array brackets: [ "a", "b" ] not ["a", "b"].
 - Phase 19 complete — fix deck list type grouping in Turbo Stream re-renders (cards_by_type used consistently across all paths)
 - Phase 20 complete — natural language prompt search on suggestions page
 - Phase 20 hotfix complete — Solid Cache/Queue/Cable migrations missing in production; Phase 20 feature was production-broken from merge until this hotfix shipped
+- Phase 20.2 complete — Reset filters button on suggestions page (clears NL prompt, category pills, and name search in one click)
 - Live at https://web-production-aefc3.up.railway.app
-- 596 examples, 0 failures
+- 598 examples, 0 failures
 - CI green
-- Currently on branch: `hotfix-solid-cache-migration`
+- Currently on branch: `phase-20-2-reset-filters-button`
 
 ## What was built in Phase 17
 - Rails 8 built-in authentication as the foundation (User, Session,
@@ -625,6 +626,44 @@ runs of the explicit migrate commands are clean no-ops. Full suite:
 - Custom domain (decksculptor.com is squatted; revisit post-MagicCon)
 - Email verification, password reset UI promotion, profile editing
   (intentionally out of scope for MagicCon)
+
+## What was built in Phase 20.2
+- Reset filters button (outlined pill) in the suggestions page filter bar,
+  inline after the "Combos" category pill
+- Clears all three independent filter layers in one click:
+  1. NL prompt (server-side, session-stored) — delegates to nl-prompt#clear,
+     which empties the input and calls formTarget.requestSubmit() with an
+     empty prompt, hitting the existing filter_suggestions "empty prompt"
+     path that clears session[:nl_filter_specs][deck_id] and returns the
+     full unfiltered Turbo Stream grid
+  2. Category pills (client-side) — resets _activeFilter to "all" and
+     re-renders pill styles
+  3. Name search input (client-side) — clears searchTarget.value
+- Implementation choice: Option B — reset() lives in
+  suggestion_filter_controller.js and delegates to nl-prompt#clear() for
+  the server round-trip. Reuses the existing empty-prompt path with no new
+  controller actions or routes.
+- Cross-controller coordination via Stimulus outlets:
+  - suggestion_filter_controller declares `static outlets = ["nl-prompt"]`
+  - The outer suggestion-filter div gets `data-suggestion-filter-nl-prompt-outlet="#nl-prompt-controller"`
+  - The nl-prompt div gets `id="nl-prompt-controller"`
+  - Inside reset(): `this.nlPromptOutlet.clear()` calls the nl-prompt
+    controller instance directly; `this.nlPromptOutlet.inputTarget.value`
+    reads its input for the disabled-state check
+  - Outlets are the canonical Stimulus cross-controller pattern — avoids
+    querySelector and keeps each controller's internals encapsulated
+- Button disabled state: starts disabled (HTML attribute), enabled by
+  updateResetButton() (a Stimulus action target, not a private method)
+  whenever any of the three layers is active. updateResetButton() is called
+  from connect(), filter(), search(), reset(), and via
+  `input->suggestion-filter#updateResetButton` on the NL input so typing
+  in the NL field enables the button immediately.
+- Known edge case — in-flight race: reset() calls requestSubmit() which
+  Turbo does not abort even if a prior NL filter submit is still in flight.
+  If a slow LLM response (1-3 s) arrives after the reset response (~50 ms),
+  it could clobber the reset. In practice not observable — the reset path
+  skips the LLM entirely and returns far sooner. Not handled in v1.
+- 598 examples, 0 failures
 
 ## Phase 20 NL prompt — out of scope for v1 (future work)
 - Saved prompts / prompt history
