@@ -67,9 +67,10 @@
     <p class="text-slate-500 text-sm mt-1">Try adding more cards to your deck first.</p>
   </div>
 <% else %>
-  <div data-controller="suggestion-filter">
+  <div data-controller="suggestion-filter"
+       data-suggestion-filter-nl-prompt-outlet="#nl-prompt-controller">
     <%# Natural language prompt bar %>
-    <div class="mb-4" data-controller="nl-prompt">
+    <div id="nl-prompt-controller" class="mb-4" data-controller="nl-prompt">
       <%= form_with url: filter_suggestions_deck_path(@deck), method: :post,
                     data: { nl_prompt_target: "form" } do |f| %>
         <div class="flex gap-2 items-center">
@@ -78,7 +79,7 @@
               autocomplete: "off",
               data: {
                 "nl-prompt-target": "input",
-                action: "input->nl-prompt#updateClearVisibility"
+                action: "input->nl-prompt#updateClearVisibility input->suggestion-filter#updateResetButton"
               },
               class: "flex-1 bg-slate-800 border border-slate-600 text-slate-200 text-sm
                       placeholder-slate-500 rounded-lg px-3 py-2
@@ -126,6 +127,16 @@
           <%= label %>
         </button>
       <% end %>
+
+      <button type="button"
+              disabled
+              data-suggestion-filter-target="resetBtn"
+              data-action="click->suggestion-filter#reset"
+              class="border border-slate-500 text-slate-400 text-xs font-medium px-3 py-1.5 rounded-full
+                     hover:border-slate-300 hover:text-white transition-colors
+                     disabled:opacity-40 disabled:cursor-not-allowed">
+        Reset
+      </button>
 
       <input type="text"
              data-suggestion-filter-target="search"

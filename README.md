@@ -139,6 +139,7 @@ bundle exec brakeman --no-pager
 | 19 | Fix deck list type grouping in Turbo Stream re-renders — card add, quantity update, and bulk import all now group by card type (not functional role), consistent with the initial page load |
 | 20 | Natural language prompt search on suggestions page (NL → Claude API → FilterSpec → SuggestionFilter) |
 | 20 hotfix | Solid Cache/Queue/Cable migrations missing in production — Phase 20 crashed on every NL prompt with PG::UndefinedTable; installed migration files and updated `bin/docker-entrypoint` to run per-database migrate commands on every deploy |
+| 20.2 | Reset button on suggestions page — clears NL prompt, category pills, and name search in one click via Stimulus outlets |
 
 ## Roadmap
 
