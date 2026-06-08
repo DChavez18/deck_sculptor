@@ -37,7 +37,7 @@ inside array brackets: [ "a", "b" ] not ["a", "b"].
 ## Current status
 - Live at https://web-production-aefc3.up.railway.app
 - 598 examples, 0 failures, CI green
-- Currently on branch: `chore-trim-claude-md`
+- Currently on branch: `phase-21-instrumentation`
 - Most recent work: Phase 20.2 — Reset filters button on suggestions page
 - Full phase history: see README.md
 

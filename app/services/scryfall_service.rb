@@ -40,14 +40,25 @@ class ScryfallService
   end
 
   def find_card_by_id(scryfall_id)
+    t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     cached = CardCache.fetch(scryfall_id)
-    return cached if cached
+    if cached
+      elapsed = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000).round
+      Rails.logger.info(
+        "[INSTR scryfall_find_by_id] cache_hit=true scryfall_id=#{scryfall_id} elapsed_ms=#{elapsed}"
+      )
+      return cached
+    end
 
     response = get_request("/cards/#{scryfall_id}")
     return nil unless success?(response)
 
     card = parse_body(response)
     CardCache.store(card["id"], card["name"], card)
+    elapsed = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000).round
+    Rails.logger.info(
+      "[INSTR scryfall_find_by_id] cache_hit=false scryfall_id=#{scryfall_id} elapsed_ms=#{elapsed}"
+    )
     card
   end
 

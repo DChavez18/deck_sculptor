@@ -3,6 +3,11 @@ class DeckCardsController < ApplicationController
   before_action :set_deck
 
   def create
+    t0  = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    tid = Thread.current.object_id
+    Rails.logger.info(
+      "[INSTR deck_cards_create] entry thread_id=#{tid} deck_id=#{params[:deck_id]}"
+    )
     scryfall_id = deck_card_params[:scryfall_id]
     card_name   = deck_card_params[:card_name]
     return_to   = deck_card_params[:return_to]
@@ -42,12 +47,24 @@ class DeckCardsController < ApplicationController
     if @deck_card.save
       respond_to do |format|
         format.turbo_stream do
+          render_t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          list_html = render_to_string(
+            partial: "decks/deck_card_list",
+            locals: { deck: @deck, grouped_cards: @deck.cards_by_type },
+            formats: [ :html ]
+          )
+          render_elapsed = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - render_t0) * 1000).round
+          deck_id   = @deck.id
+          deck_size = @deck.deck_cards.size
+          Rails.logger.info(
+            "[INSTR deck_card_list_render] deck_id=#{deck_id} deck_size=#{deck_size} elapsed_ms=#{render_elapsed}"
+          )
+          elapsed = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000).round
+          Rails.logger.info(
+            "[INSTR deck_cards_create] exit thread_id=#{tid} deck_id=#{deck_id} deck_size=#{deck_size} elapsed_ms=#{elapsed}"
+          )
           render turbo_stream: [
-            turbo_stream.update(
-              "deck_card_list",
-              partial: "decks/deck_card_list",
-              locals: { deck: @deck, grouped_cards: @deck.cards_by_type }
-            ),
+            turbo_stream.update("deck_card_list", list_html),
             turbo_stream.remove("suggestion-#{card_data['id']}")
           ]
         end
