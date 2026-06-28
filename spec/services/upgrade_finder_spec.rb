@@ -43,6 +43,14 @@ RSpec.describe UpgradeFinder do
     allow(engine).to receive(:suggestions).and_return([
       { card: better_sorcery, score: 7, reasons: [ "Shares keyword: Flying" ] }
     ])
+    # Bypass the validity gate by default so unrelated tests aren't affected by it.
+    # Tests in the valid_suggestion? context override this with and_call_original.
+    allow(Rails.cache).to receive(:fetch)
+      .with(start_with("suggestion_valid"), anything)
+      .and_return(true)
+    allow(Rails.cache).to receive(:fetch)
+      .with(start_with("upgrade_reason"), anything)
+      .and_call_original
     allow(HTTParty).to receive(:post).and_return(default_api_response)
   end
 
@@ -97,6 +105,55 @@ RSpec.describe UpgradeFinder do
       empty_deck = create(:deck, commander: commander)
       allow(SuggestionEngine).to receive(:new).and_return(engine)
       expect(described_class.new(empty_deck).upgrades).to eq([])
+    end
+
+    context "valid_suggestion?" do
+      let(:yes_response) do
+        instance_double(
+          HTTParty::Response,
+          success?: true,
+          parsed_response: { "content" => [ { "text" => "YES" } ] }
+        )
+      end
+      let(:no_response) do
+        instance_double(
+          HTTParty::Response,
+          success?: true,
+          parsed_response: { "content" => [ { "text" => "NO" } ] }
+        )
+      end
+
+      it "includes the suggestion when Claude responds YES" do
+        allow(Rails.cache).to receive(:fetch)
+          .with(start_with("suggestion_valid"), anything)
+          .and_call_original
+        allow(HTTParty).to receive(:post).and_return(yes_response, default_api_response)
+        upgrades = finder.upgrades
+        expect(upgrades).not_to be_empty
+        expect(upgrades.first[:upgrade_card]["name"]).to eq("Treasure Cruise")
+      end
+
+      it "filters the suggestion when Claude responds NO" do
+        allow(Rails.cache).to receive(:fetch)
+          .with(start_with("suggestion_valid"), anything)
+          .and_call_original
+        allow(HTTParty).to receive(:post).and_return(no_response)
+        expect(finder.upgrades).to be_empty
+      end
+
+      it "shows the suggestion when the validity API raises" do
+        allow(Rails.cache).to receive(:fetch)
+          .with(start_with("suggestion_valid"), anything)
+          .and_call_original
+        allow(HTTParty).to receive(:post).and_raise(StandardError, "timeout")
+        expect(finder.upgrades).not_to be_empty
+      end
+
+      it "skips the validity API call on a cache hit" do
+        # validity is already cached true by the outer before; only the reason call hits HTTParty
+        expect(HTTParty).to receive(:post).once
+        finder.upgrades
+      end
     end
 
     context "generate_reason" do

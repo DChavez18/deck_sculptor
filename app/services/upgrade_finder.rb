@@ -1,11 +1,12 @@
 require "set"
 
 class UpgradeFinder
-  SCORE_THRESHOLD  = 6
-  CLAUDE_API_URL   = "https://api.anthropic.com/v1/messages"
-  CLAUDE_MODEL     = "claude-sonnet-4-6"
-  CLAUDE_TOKENS    = 150
-  REASON_CACHE_TTL = 1.hour
+  SCORE_THRESHOLD    = 6
+  CLAUDE_API_URL     = "https://api.anthropic.com/v1/messages"
+  CLAUDE_MODEL       = "claude-sonnet-4-6"
+  CLAUDE_TOKENS      = 150
+  REASON_CACHE_TTL   = 1.hour
+  VALIDITY_CACHE_TTL = 24.hours
 
   def initialize(deck)
     @deck = deck
@@ -50,6 +51,7 @@ class UpgradeFinder
       end
 
       next unless deck_card
+      next unless valid_suggestion?(deck_card, card)
 
       pool.delete(deck_card)
       results << {
@@ -63,6 +65,59 @@ class UpgradeFinder
   end
 
   private
+
+  def valid_suggestion?(deck_card, card)
+    commander_name = @deck.commander.name
+    cache_key = "suggestion_valid/#{commander_name}/#{deck_card.card_name}/#{card['name']}"
+
+    result = Rails.cache.fetch(cache_key, expires_in: VALIDITY_CACHE_TTL, skip_nil: true) do
+      call_validity_api(deck_card, card)
+    end
+
+    result.nil? ? true : result
+  rescue StandardError
+    true
+  end
+
+  def call_validity_api(deck_card, card)
+    response = HTTParty.post(
+      CLAUDE_API_URL,
+      headers: {
+        "x-api-key"         => api_key,
+        "anthropic-version" => "2023-06-01",
+        "Content-Type"      => "application/json"
+      },
+      body: {
+        model:      CLAUDE_MODEL,
+        max_tokens: 20,
+        messages:   [ { role: "user", content: validity_prompt(deck_card, card) } ]
+      }.to_json
+    )
+    return nil unless response.success?
+
+    text = response.parsed_response.dig("content", 0, "text").to_s.strip.upcase
+    text.start_with?("YES")
+  rescue StandardError
+    nil
+  end
+
+  def validity_prompt(deck_card, card)
+    commander        = @deck.commander
+    commander_oracle = (commander.raw_data || {})["oracle_text"].to_s.truncate(300)
+    <<~PROMPT.strip
+      Commander: #{commander.name}
+      Commander oracle text: #{commander_oracle}
+      Deck themes: #{@deck.themes.to_s.presence || "none"}
+
+      Card being replaced: #{deck_card.card_name}
+      Replaced card oracle text: #{deck_card.oracle_text.to_s.truncate(200)}
+
+      Suggested upgrade: #{card["name"]} (mana cost: #{card["mana_cost"]})
+      Upgrade oracle text: #{card["oracle_text"].to_s.truncate(200)}
+
+      Is #{card["name"]} a genuinely synergistic upgrade for this commander deck? Answer only YES or NO.
+    PROMPT
+  end
 
   def generate_reason(deck_card, suggestion, shared_keywords, matching_themes)
     card           = suggestion[:card]
