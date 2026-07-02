@@ -1,7 +1,7 @@
 require "set"
 
 class ComboFinderService
-  BASE_URL = "https://backend.commanderspellbook.com/api/v1/variants/"
+  BASE_URL = "https://backend.commanderspellbook.com/variants/"
 
   def find_combos(deck_card_names)
     return [] if deck_card_names.blank?
