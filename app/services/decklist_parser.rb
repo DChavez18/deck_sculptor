@@ -25,7 +25,8 @@ class DecklistParser
   private
 
   def parse_line(line)
-    clean = line.sub(/\s*\([A-Z0-9]{2,6}\)\s*[\w-]*/, "").strip
+    clean = line.sub(/\s*\([A-Z0-9]{2,6}\)\s*[\w-]*/, "")
+    clean = clean.sub(/\s*\*[A-Za-z]\*\s*\z/, "").strip
 
     if (m = clean.match(/\A(\d+)x?\s+(.+)\z/))
       { name: m[2].strip, quantity: m[1].to_i }

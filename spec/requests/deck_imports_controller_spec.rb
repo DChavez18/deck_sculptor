@@ -166,12 +166,12 @@ RSpec.describe "DeckImports", type: :request do
         }.not_to change(DeckCard, :count)
       end
 
-      it "updates the quantity of the existing deck card" do
+      it "sums the quantity onto the existing deck card" do
         post deck_deck_imports_path(deck),
              params: { decklist: "3 Sol Ring" },
              headers: turbo_headers
 
-        expect(existing_card.reload.quantity).to eq(3)
+        expect(existing_card.reload.quantity).to eq(4)
       end
 
       it "counts the update as skipped in the summary" do
@@ -180,6 +180,23 @@ RSpec.describe "DeckImports", type: :request do
              headers: turbo_headers
 
         expect(response.body).to include("skipped")
+      end
+    end
+
+    context "when two lines resolve to the same card (e.g. different printings)" do
+      before do
+        allow(scryfall_service).to receive(:find_card_by_name).with("Island").and_return(
+          card_data.merge("id" => "scryfall-island", "name" => "Island", "type_line" => "Basic Land")
+        )
+      end
+
+      it "sums quantities instead of overwriting" do
+        post deck_deck_imports_path(deck),
+             params: { decklist: "1 Island (WOE) 273\n2 Island (LCI) 271" },
+             headers: turbo_headers
+
+        expect(DeckCard.count).to eq(1)
+        expect(DeckCard.last.quantity).to eq(3)
       end
     end
   end

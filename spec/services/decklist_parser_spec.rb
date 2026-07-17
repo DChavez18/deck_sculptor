@@ -95,6 +95,46 @@ RSpec.describe DecklistParser do
       end
     end
 
+    context "foil finish marker stripping" do
+      let(:text) { "1 Pramikon, Sky Rampart (C19) 47 *F*" }
+
+      it "strips the set code, collector number, and foil marker" do
+        expect(parser.parse).to eq([ { name: "Pramikon, Sky Rampart", quantity: 1 } ])
+      end
+    end
+
+    context "foil finish marker with a different set/collector format" do
+      let(:text) { "1 Boros Charm (FDN) 721 *F*" }
+
+      it "strips the set code, collector number, and foil marker" do
+        expect(parser.parse).to eq([ { name: "Boros Charm", quantity: 1 } ])
+      end
+    end
+
+    context "etched finish marker stripping" do
+      let(:text) { "1 Sculpting Steel (BRO) 234 *E*" }
+
+      it "strips the etched marker" do
+        expect(parser.parse).to eq([ { name: "Sculpting Steel", quantity: 1 } ])
+      end
+    end
+
+    context "special finish marker stripping" do
+      let(:text) { "1 Command Tower (ELD) 333 *S*" }
+
+      it "strips the special marker" do
+        expect(parser.parse).to eq([ { name: "Command Tower", quantity: 1 } ])
+      end
+    end
+
+    context "no finish marker present" do
+      let(:text) { "1 Sol Ring (TDC) 106" }
+
+      it "leaves the name unchanged" do
+        expect(parser.parse).to eq([ { name: "Sol Ring", quantity: 1 } ])
+      end
+    end
+
     context "cards under Commander section are skipped" do
       let(:text) { "Commander\n1 Atraxa, Praetors' Voice\nDeck\n1 Sol Ring" }
 
