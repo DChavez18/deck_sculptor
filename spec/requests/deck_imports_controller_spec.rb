@@ -147,7 +147,7 @@ RSpec.describe "DeckImports", type: :request do
       end
     end
 
-    context "when a card is already in the deck (duplicate)" do
+    context "when a non-land card is already in the deck (duplicate)" do
       let!(:existing_card) do
         create(:deck_card, deck: deck, scryfall_id: "scryfall-sol-ring", card_name: "Sol Ring",
                category: "artifact", type_line: "Artifact", cmc: 1.0, color_identity: "",
@@ -166,20 +166,65 @@ RSpec.describe "DeckImports", type: :request do
         }.not_to change(DeckCard, :count)
       end
 
-      it "sums the quantity onto the existing deck card" do
+      it "leaves the existing quantity unchanged" do
         post deck_deck_imports_path(deck),
              params: { decklist: "3 Sol Ring" },
              headers: turbo_headers
 
-        expect(existing_card.reload.quantity).to eq(4)
+        expect(existing_card.reload.quantity).to eq(1)
       end
 
-      it "counts the update as skipped in the summary" do
+      it "counts the duplicate as skipped in the summary" do
         post deck_deck_imports_path(deck),
              params: { decklist: "3 Sol Ring" },
              headers: turbo_headers
 
         expect(response.body).to include("skipped")
+      end
+    end
+
+    context "when a basic land is already in the deck (duplicate)" do
+      let!(:existing_forest) do
+        create(:deck_card, deck: deck, scryfall_id: "scryfall-forest", card_name: "Forest",
+               category: "land", type_line: "Basic Land — Forest", cmc: 0.0, color_identity: "",
+               quantity: 10)
+      end
+
+      before do
+        allow(scryfall_service).to receive(:find_card_by_name).with("Forest").and_return(
+          card_data.merge("id" => "scryfall-forest", "name" => "Forest", "type_line" => "Basic Land — Forest")
+        )
+      end
+
+      it "sums the quantity onto the existing deck card" do
+        post deck_deck_imports_path(deck),
+             params: { decklist: "5 Forest" },
+             headers: turbo_headers
+
+        expect(existing_forest.reload.quantity).to eq(15)
+      end
+    end
+
+    context "when a snow-covered basic land is already in the deck (duplicate)" do
+      let!(:existing_snow_forest) do
+        create(:deck_card, deck: deck, scryfall_id: "scryfall-snow-forest", card_name: "Snow-Covered Forest",
+               category: "land", type_line: "Basic Snow Land — Forest", cmc: 0.0, color_identity: "",
+               quantity: 3)
+      end
+
+      before do
+        allow(scryfall_service).to receive(:find_card_by_name).with("Snow-Covered Forest").and_return(
+          card_data.merge("id" => "scryfall-snow-forest", "name" => "Snow-Covered Forest",
+                          "type_line" => "Basic Snow Land — Forest")
+        )
+      end
+
+      it "sums the quantity onto the existing deck card" do
+        post deck_deck_imports_path(deck),
+             params: { decklist: "2 Snow-Covered Forest" },
+             headers: turbo_headers
+
+        expect(existing_snow_forest.reload.quantity).to eq(5)
       end
     end
 

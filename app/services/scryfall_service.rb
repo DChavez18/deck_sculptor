@@ -3,6 +3,8 @@ require "uri"
 class ScryfallService
   BASE_URL = "https://api.scryfall.com"
   RATE_LIMIT_DELAY = 0.1
+  MAX_RETRIES = 3
+  RETRY_BACKOFF = 1.0
 
   def search_commander(name)
     query = "name:#{name} is:commander legal:commander"
@@ -98,12 +100,25 @@ class ScryfallService
   private
 
   def get_request(path, params = {})
-    sleep(RATE_LIMIT_DELAY)
     url = build_url(path, params)
-    HTTParty.get(url)
+    response = nil
+
+    (MAX_RETRIES + 1).times do |attempt|
+      sleep(RATE_LIMIT_DELAY)
+      response = HTTParty.get(url)
+      break unless rate_limited?(response)
+
+      sleep(RETRY_BACKOFF * (attempt + 1))
+    end
+
+    response
   rescue StandardError => e
     Rails.logger.error("ScryfallService error: #{e.message}")
     nil
+  end
+
+  def rate_limited?(response)
+    response && response.code == 429
   end
 
   def build_url(path, params)

@@ -33,7 +33,7 @@ class DeckImportsController < ApplicationController
       existing  = @deck.deck_cards.find_by(scryfall_id: card_data["id"])
 
       if existing
-        existing.update!(quantity: existing.quantity + entry[:quantity])
+        existing.update!(quantity: existing.quantity + entry[:quantity]) if basic_land?(card_data)
         skipped += 1
       else
         @deck.deck_cards.create!(
@@ -74,5 +74,9 @@ class DeckImportsController < ApplicationController
 
   def set_deck
     @deck = Deck.find(params[:deck_id])
+  end
+
+  def basic_land?(card_data)
+    card_data["type_line"].to_s.include?("Basic")
   end
 end

@@ -168,6 +168,42 @@ RSpec.describe ScryfallService, type: :service do
         expect(service.find_card_by_name(card_name)).to be_nil
       end
     end
+
+    context "when the API returns 429 once and then succeeds on retry" do
+      before do
+        allow(service).to receive(:sleep)
+        stub_request(:get, url).to_return(
+          { status: 429 },
+          { status: 200, body: card_hash.to_json }
+        )
+      end
+
+      it "returns the card hash" do
+        result = service.find_card_by_name(card_name)
+        expect(result["name"]).to eq("Atraxa, Praetors' Voice")
+      end
+
+      it "retries the request" do
+        service.find_card_by_name(card_name)
+        expect(a_request(:get, url)).to have_been_made.times(2)
+      end
+    end
+
+    context "when the API returns 429 persistently past the retry limit" do
+      before do
+        allow(service).to receive(:sleep)
+        stub_request(:get, url).to_return(status: 429)
+      end
+
+      it "returns nil" do
+        expect(service.find_card_by_name(card_name)).to be_nil
+      end
+
+      it "stops retrying after the max retry count" do
+        service.find_card_by_name(card_name)
+        expect(a_request(:get, url)).to have_been_made.times(ScryfallService::MAX_RETRIES + 1)
+      end
+    end
   end
 
   # ── search_cards ─────────────────────────────────────────────────────────────
