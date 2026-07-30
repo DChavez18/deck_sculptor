@@ -16,6 +16,17 @@ class CardCache < ApplicationRecord
     nil
   end
 
+  def self.fetch_by_names(names)
+    return {} if names.empty?
+
+    where("name ILIKE ANY (ARRAY[?])", names).each_with_object({}) do |record, hash|
+      next if record.stale?
+
+      original = names.find { |name| name.casecmp?(record.name) }
+      hash[original] = record.data if original
+    end
+  end
+
   def self.store(scryfall_id, name, data)
     record = find_or_initialize_by(scryfall_id: scryfall_id)
     record.update!(name: name, data: data, cached_at: Time.current)

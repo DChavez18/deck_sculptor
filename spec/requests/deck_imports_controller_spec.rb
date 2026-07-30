@@ -10,6 +10,7 @@ RSpec.describe "DeckImports", type: :request do
       "id"             => "scryfall-sol-ring",
       "name"           => "Sol Ring",
       "type_line"      => "Artifact",
+      "oracle_text"    => "{T}: Add {C}{C}.",
       "cmc"            => 1.0,
       "color_identity" => [],
       "image_uris"     => { "normal" => "https://cards.scryfall.io/normal/front/sol.jpg" }
@@ -20,7 +21,7 @@ RSpec.describe "DeckImports", type: :request do
 
   before do
     allow(ScryfallService).to receive(:new).and_return(scryfall_service)
-    allow(CardCache).to receive(:fetch_by_name).and_return(nil)
+    allow(CardCache).to receive(:fetch_by_names).and_return({})
   end
 
   describe "POST /decks/:deck_id/deck_imports" do
@@ -35,6 +36,16 @@ RSpec.describe "DeckImports", type: :request do
                params: { decklist: "1 Sol Ring" },
                headers: turbo_headers
         }.to change(DeckCard, :count).by(1)
+      end
+
+      it "persists oracle_text and raw_data for accurate ratio analysis" do
+        post deck_deck_imports_path(deck),
+             params: { decklist: "1 Sol Ring" },
+             headers: turbo_headers
+
+        deck_card = DeckCard.last
+        expect(deck_card.oracle_text).to eq(card_data["oracle_text"])
+        expect(deck_card.raw_data).to eq(card_data)
       end
 
       it "responds with Turbo Stream" do
@@ -225,6 +236,76 @@ RSpec.describe "DeckImports", type: :request do
              headers: turbo_headers
 
         expect(existing_snow_forest.reload.quantity).to eq(5)
+      end
+    end
+
+    context "when a card is already in the CardCache" do
+      before do
+        allow(CardCache).to receive(:fetch_by_names).with([ "Sol Ring" ]).and_return("Sol Ring" => card_data)
+        allow(scryfall_service).to receive(:find_card_by_name)
+      end
+
+      it "does not hit Scryfall for the cached card" do
+        post deck_deck_imports_path(deck),
+             params: { decklist: "1 Sol Ring" },
+             headers: turbo_headers
+
+        expect(scryfall_service).not_to have_received(:find_card_by_name)
+      end
+
+      it "still imports the card" do
+        expect {
+          post deck_deck_imports_path(deck),
+               params: { decklist: "1 Sol Ring" },
+               headers: turbo_headers
+        }.to change(DeckCard, :count).by(1)
+      end
+    end
+
+    context "deck stats update after import" do
+      before do
+        allow(scryfall_service).to receive(:find_card_by_name).with("Sol Ring").and_return(card_data)
+      end
+
+      it "targets the deck_stats element for the turbo stream update" do
+        post deck_deck_imports_path(deck),
+             params: { decklist: "1 Sol Ring" },
+             headers: turbo_headers
+
+        expect(response.body).to match(%r{<turbo-stream action="update" target="deck_stats">})
+      end
+
+      it "renders the updated card count in the deck stats stream" do
+        post deck_deck_imports_path(deck),
+             params: { decklist: "1 Sol Ring" },
+             headers: turbo_headers
+
+        expect(response.body).to include("1 / 99 cards")
+      end
+    end
+
+    context "Building Toward panel updates after import" do
+      let!(:deck) { create(:deck, commander: commander, intent_completed: true) }
+
+      before do
+        allow(scryfall_service).to receive(:find_card_by_name).with("Sol Ring").and_return(card_data)
+      end
+
+      it "targets the building_toward element for the turbo stream update" do
+        post deck_deck_imports_path(deck),
+             params: { decklist: "1 Sol Ring" },
+             headers: turbo_headers
+
+        expect(response.body).to match(%r{<turbo-stream action="update" target="building_toward">})
+      end
+
+      it "reflects the newly imported card in the ratio counts" do
+        post deck_deck_imports_path(deck),
+             params: { decklist: "1 Sol Ring" },
+             headers: turbo_headers
+
+        expect(response.body).to include("Building Toward")
+        expect(response.body).to include("1 / 10")
       end
     end
 
