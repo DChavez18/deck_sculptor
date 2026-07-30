@@ -52,6 +52,48 @@ RSpec.describe CardCache, type: :model do
     end
   end
 
+  describe ".fetch_by_names" do
+    it "returns a hash of matching names to data for fresh entries" do
+      sol_ring = create(:card_cache, name: "Sol Ring", cached_at: 1.hour.ago)
+      command_tower = create(:card_cache, name: "Command Tower", cached_at: 1.hour.ago)
+
+      result = CardCache.fetch_by_names([ "Sol Ring", "Command Tower" ])
+
+      expect(result).to eq(
+        "Sol Ring" => sol_ring.data,
+        "Command Tower" => command_tower.data
+      )
+    end
+
+    it "matches case-insensitively" do
+      card = create(:card_cache, name: "Sol Ring", cached_at: 1.hour.ago)
+
+      result = CardCache.fetch_by_names([ "sol ring" ])
+
+      expect(result).to eq("sol ring" => card.data)
+    end
+
+    it "omits names with no cache entry" do
+      create(:card_cache, name: "Sol Ring", cached_at: 1.hour.ago)
+
+      result = CardCache.fetch_by_names([ "Sol Ring", "Nonexistent Card" ])
+
+      expect(result.keys).to eq([ "Sol Ring" ])
+    end
+
+    it "omits stale entries" do
+      create(:card_cache, :stale, name: "Sol Ring")
+
+      result = CardCache.fetch_by_names([ "Sol Ring" ])
+
+      expect(result).to eq({})
+    end
+
+    it "returns an empty hash for an empty list" do
+      expect(CardCache.fetch_by_names([])).to eq({})
+    end
+  end
+
   describe ".store" do
     it "creates a new cache entry" do
       data = { "name" => "Island", "cmc" => 0 }

@@ -12,15 +12,16 @@ class DeckImportsController < ApplicationController
       return
     end
 
-    service   = ScryfallService.new
-    imported  = 0
-    skipped   = 0
-    not_found = []
+    service      = ScryfallService.new
+    imported     = 0
+    skipped      = 0
+    not_found    = []
+    cached_cards = CardCache.fetch_by_names(cards.map { |entry| entry[:name] })
 
     cards.each do |entry|
       next if entry[:name].casecmp?(@deck.commander.name)
 
-      card_data = CardCache.fetch_by_name(entry[:name]) ||
+      card_data = cached_cards[entry[:name]] ||
                   service.find_card_by_name(entry[:name])
       unless card_data
         not_found << entry[:name]
@@ -45,6 +46,8 @@ class DeckImportsController < ApplicationController
           cmc:                  card_data["cmc"],
           color_identity:       card_data["color_identity"]&.join(","),
           type_line:            card_data["type_line"],
+          oracle_text:          card_data["oracle_text"],
+          raw_data:             card_data,
           image_uri:            card_data.dig("image_uris", "normal") ||
                                 card_data.dig("card_faces", 0, "image_uris", "normal")
         )
@@ -61,9 +64,12 @@ class DeckImportsController < ApplicationController
       turbo_stream.replace("deck_card_list",
         partial: "decks/deck_card_list",
         locals: { grouped_cards: @deck.cards_by_type, deck: @deck }),
-      turbo_stream.update("deck-progress",
+      turbo_stream.update("deck_stats",
         partial: "decks/deck_stats",
         locals: { deck: @deck }),
+      turbo_stream.update("building_toward",
+        partial: "decks/building_toward",
+        locals: { deck: @deck, ratio_report: RatioAnalyzer.new(@deck).report }),
       turbo_stream.replace("import-result",
         partial: "deck_imports/result",
         locals: { summary: summary, not_found: not_found })

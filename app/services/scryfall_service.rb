@@ -2,7 +2,7 @@ require "uri"
 
 class ScryfallService
   BASE_URL = "https://api.scryfall.com"
-  RATE_LIMIT_DELAY = 0.1
+  RATE_LIMIT_DELAY = 0.15
   MAX_RETRIES = 3
   RETRY_BACKOFF = 1.0
 
