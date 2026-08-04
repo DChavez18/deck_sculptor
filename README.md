@@ -140,8 +140,16 @@ bundle exec brakeman --no-pager
 | 20 | Natural language prompt search on suggestions page (NL → Claude API → FilterSpec → SuggestionFilter) |
 | 20 hotfix | Solid Cache/Queue/Cable migrations missing in production — Phase 20 crashed on every NL prompt with PG::UndefinedTable; installed migration files and updated `bin/docker-entrypoint` to run per-database migrate commands on every deploy |
 | 20.2 | Reset button on suggestions page — clears NL prompt, category pills, and name search in one click via Stimulus outlets |
+| 21 | Temporary instrumentation log lines to diagnose 15-20s add-card latency (thread starvation hypothesis) |
+| 22 | Claude API-generated upgrade suggestion reasoning in UpgradeFinder — replaced rule-based template strings with 1-2 sentence explanations grounded in commander oracle text and deck themes |
+| 23 | Claude API quality gate to filter bad upgrade suggestions before display — YES/NO validity check cached 24 hours |
+| 24 | Fix ComboFinderService BASE_URL after Commander Spellbook API migration (/api/v1/variants/ → /variants/) |
+| 25 | Fix Moxfield import — strip *F*/*E*/*S* foil markers from card names, fix quantity summing for basics vs non-basics |
+| 26 | Scryfall 429 retry backoff in get_request (3 retries with increasing backoff) |
+| 27 | Fix deck stats turbo stream (wrong target ID), extract Building Toward to partial, persist oracle_text/raw_data on import, bulk CardCache pre-check |
+| 28 | Bulk Scryfall collection API for imports, eliminating rate limiting on large decklists |
 
 ## Roadmap
 
-- **Phase 21 — Suggestion polish:** Refined suggestion filters and improved combos page (targeting post-MagicCon)
+- **Suggestion polish:** Refined suggestion filters and improved combos page (targeting post-MagicCon)
 - **Post-MagicCon:** Functional-role filter UI for deck card list (right home for all_roles data), custom domain, password reset UI, profile editing

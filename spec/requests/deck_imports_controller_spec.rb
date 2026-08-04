@@ -27,7 +27,7 @@ RSpec.describe "DeckImports", type: :request do
   describe "POST /decks/:deck_id/deck_imports" do
     context "with a valid decklist" do
       before do
-        allow(scryfall_service).to receive(:find_card_by_name).with("Sol Ring").and_return(card_data)
+        allow(scryfall_service).to receive(:find_cards_by_names).and_return("Sol Ring" => card_data)
       end
 
       it "creates deck cards" do
@@ -62,7 +62,7 @@ RSpec.describe "DeckImports", type: :request do
 
     context "when a card is not found" do
       before do
-        allow(scryfall_service).to receive(:find_card_by_name).with("Bogus Card").and_return(nil)
+        allow(scryfall_service).to receive(:find_cards_by_names).and_return({})
       end
 
       it "does not create deck cards" do
@@ -104,6 +104,10 @@ RSpec.describe "DeckImports", type: :request do
     end
 
     context "when the decklist contains the commander name" do
+      before do
+        allow(scryfall_service).to receive(:find_cards_by_names).and_return({})
+      end
+
       it "skips a card that matches the deck's commander name" do
         expect {
           post deck_deck_imports_path(deck),
@@ -129,7 +133,7 @@ RSpec.describe "DeckImports", type: :request do
       end
 
       before do
-        allow(scryfall_service).to receive(:find_card_by_name).with("Bloom Tender").and_return(bloom_tender_data)
+        allow(scryfall_service).to receive(:find_cards_by_names).and_return("Bloom Tender" => bloom_tender_data)
       end
 
       it "renders Bloom Tender under the Creature section header, not Ramp" do
@@ -144,8 +148,8 @@ RSpec.describe "DeckImports", type: :request do
 
     context "when importing a card with quantity > 1" do
       before do
-        allow(scryfall_service).to receive(:find_card_by_name).with("Island").and_return(
-          card_data.merge("id" => "scryfall-island", "name" => "Island", "type_line" => "Basic Land")
+        allow(scryfall_service).to receive(:find_cards_by_names).and_return(
+          "Island" => card_data.merge("id" => "scryfall-island", "name" => "Island", "type_line" => "Basic Land")
         )
       end
 
@@ -166,7 +170,7 @@ RSpec.describe "DeckImports", type: :request do
       end
 
       before do
-        allow(scryfall_service).to receive(:find_card_by_name).with("Sol Ring").and_return(card_data)
+        allow(scryfall_service).to receive(:find_cards_by_names).and_return("Sol Ring" => card_data)
       end
 
       it "does not create a new deck card" do
@@ -202,8 +206,8 @@ RSpec.describe "DeckImports", type: :request do
       end
 
       before do
-        allow(scryfall_service).to receive(:find_card_by_name).with("Forest").and_return(
-          card_data.merge("id" => "scryfall-forest", "name" => "Forest", "type_line" => "Basic Land — Forest")
+        allow(scryfall_service).to receive(:find_cards_by_names).and_return(
+          "Forest" => card_data.merge("id" => "scryfall-forest", "name" => "Forest", "type_line" => "Basic Land — Forest")
         )
       end
 
@@ -224,9 +228,9 @@ RSpec.describe "DeckImports", type: :request do
       end
 
       before do
-        allow(scryfall_service).to receive(:find_card_by_name).with("Snow-Covered Forest").and_return(
-          card_data.merge("id" => "scryfall-snow-forest", "name" => "Snow-Covered Forest",
-                          "type_line" => "Basic Snow Land — Forest")
+        allow(scryfall_service).to receive(:find_cards_by_names).and_return(
+          "Snow-Covered Forest" => card_data.merge("id" => "scryfall-snow-forest", "name" => "Snow-Covered Forest",
+                                                    "type_line" => "Basic Snow Land — Forest")
         )
       end
 
@@ -242,7 +246,7 @@ RSpec.describe "DeckImports", type: :request do
     context "when a card is already in the CardCache" do
       before do
         allow(CardCache).to receive(:fetch_by_names).with([ "Sol Ring" ]).and_return("Sol Ring" => card_data)
-        allow(scryfall_service).to receive(:find_card_by_name)
+        allow(scryfall_service).to receive(:find_cards_by_names).and_return({})
       end
 
       it "does not hit Scryfall for the cached card" do
@@ -250,7 +254,7 @@ RSpec.describe "DeckImports", type: :request do
              params: { decklist: "1 Sol Ring" },
              headers: turbo_headers
 
-        expect(scryfall_service).not_to have_received(:find_card_by_name)
+        expect(scryfall_service).to have_received(:find_cards_by_names).with([])
       end
 
       it "still imports the card" do
@@ -264,7 +268,7 @@ RSpec.describe "DeckImports", type: :request do
 
     context "deck stats update after import" do
       before do
-        allow(scryfall_service).to receive(:find_card_by_name).with("Sol Ring").and_return(card_data)
+        allow(scryfall_service).to receive(:find_cards_by_names).and_return("Sol Ring" => card_data)
       end
 
       it "targets the deck_stats element for the turbo stream update" do
@@ -288,7 +292,7 @@ RSpec.describe "DeckImports", type: :request do
       let!(:deck) { create(:deck, commander: commander, intent_completed: true) }
 
       before do
-        allow(scryfall_service).to receive(:find_card_by_name).with("Sol Ring").and_return(card_data)
+        allow(scryfall_service).to receive(:find_cards_by_names).and_return("Sol Ring" => card_data)
       end
 
       it "targets the building_toward element for the turbo stream update" do
@@ -311,8 +315,8 @@ RSpec.describe "DeckImports", type: :request do
 
     context "when two lines resolve to the same card (e.g. different printings)" do
       before do
-        allow(scryfall_service).to receive(:find_card_by_name).with("Island").and_return(
-          card_data.merge("id" => "scryfall-island", "name" => "Island", "type_line" => "Basic Land")
+        allow(scryfall_service).to receive(:find_cards_by_names).and_return(
+          "Island" => card_data.merge("id" => "scryfall-island", "name" => "Island", "type_line" => "Basic Land")
         )
       end
 

@@ -16,13 +16,15 @@ class DeckImportsController < ApplicationController
     imported     = 0
     skipped      = 0
     not_found    = []
-    cached_cards = CardCache.fetch_by_names(cards.map { |entry| entry[:name] })
+    all_names    = cards.map { |entry| entry[:name] }
+    cached_cards = CardCache.fetch_by_names(all_names)
+    missing      = (all_names - cached_cards.keys).uniq
+    fetched      = service.find_cards_by_names(missing)
 
     cards.each do |entry|
       next if entry[:name].casecmp?(@deck.commander.name)
 
-      card_data = cached_cards[entry[:name]] ||
-                  service.find_card_by_name(entry[:name])
+      card_data = cached_cards[entry[:name]] || fetched[entry[:name]]
       unless card_data
         not_found << entry[:name]
         next

@@ -468,4 +468,121 @@ RSpec.describe ScryfallService, type: :service do
       end
     end
   end
+
+  # ── find_cards_by_names ──────────────────────────────────────────────────────
+
+  describe "#find_cards_by_names" do
+    let(:collection_url) { "#{base_url}/cards/collection" }
+
+    context "with an empty list of names" do
+      it "returns an empty hash without making a request" do
+        result = service.find_cards_by_names([])
+        expect(result).to eq({})
+        expect(a_request(:post, collection_url)).not_to have_been_made
+      end
+    end
+
+    context "with a single batch where every name is found" do
+      let(:names) { [ card_hash["name"] ] }
+
+      before do
+        stub_request(:post, collection_url)
+          .with(body: { identifiers: [ { name: names.first } ] })
+          .to_return(status: 200, body: { data: [ card_hash ], not_found: [] }.to_json)
+      end
+
+      it "returns a hash keyed by the original name" do
+        result = service.find_cards_by_names(names)
+        expect(result).to eq(names.first => card_hash)
+      end
+
+      it "stores each card in CardCache" do
+        expect { service.find_cards_by_names(names) }
+          .to change(CardCache, :count).by(1)
+      end
+    end
+
+    context "when some names are not found in the collection response" do
+      let(:names) { [ card_hash["name"], "Sol Rng" ] }
+      let(:sol_ring) { { "id" => "sol-ring-id", "name" => "Sol Ring" } }
+      let(:fuzzy_url) { "#{base_url}/cards/named?fuzzy=#{URI.encode_www_form_component('Sol Rng')}" }
+
+      before do
+        stub_request(:post, collection_url)
+          .with(body: { identifiers: [ { name: names[0] }, { name: names[1] } ] })
+          .to_return(status: 200, body: {
+            data: [ card_hash ],
+            not_found: [ { name: "Sol Rng" } ]
+          }.to_json)
+      end
+
+      context "when the fuzzy fallback finds the card" do
+        before do
+          stub_request(:get, fuzzy_url).to_return(status: 200, body: sol_ring.to_json)
+        end
+
+        it "includes the fuzzy-matched card in the result" do
+          result = service.find_cards_by_names(names)
+          expect(result).to eq(
+            card_hash["name"] => card_hash,
+            "Sol Rng" => sol_ring
+          )
+        end
+      end
+
+      context "when the fuzzy fallback also fails" do
+        before do
+          stub_request(:get, fuzzy_url).to_return(status: 404, body: not_found_response)
+        end
+
+        it "omits the unresolved name from the result" do
+          result = service.find_cards_by_names(names)
+          expect(result).to eq(card_hash["name"] => card_hash)
+        end
+      end
+    end
+
+    context "when given more than 75 names" do
+      let(:names) { (1..80).map { |i| "Card #{i}" } }
+
+      before do
+        stub_request(:post, collection_url).to_return(status: 200, body: { data: [], not_found: [] }.to_json)
+        allow(service).to receive(:find_card_by_name).and_return(nil)
+      end
+
+      it "splits the request into two batches" do
+        service.find_cards_by_names(names)
+        expect(a_request(:post, collection_url)).to have_been_made.times(2)
+      end
+
+      it "caps the first batch at 75 identifiers" do
+        service.find_cards_by_names(names)
+        expect(a_request(:post, collection_url)
+          .with(body: { identifiers: names.first(75).map { |n| { name: n } } }))
+          .to have_been_made
+      end
+
+      it "sends the remaining identifiers in the second batch" do
+        service.find_cards_by_names(names)
+        expect(a_request(:post, collection_url)
+          .with(body: { identifiers: names.drop(75).map { |n| { name: n } } }))
+          .to have_been_made
+      end
+    end
+
+    context "when the collection request fails" do
+      let(:names) { [ card_hash["name"] ] }
+      let(:fuzzy_url) { "#{base_url}/cards/named?fuzzy=#{URI.encode_www_form_component(card_hash['name'])}" }
+
+      before do
+        stub_request(:post, collection_url).to_return(status: 500)
+        stub_request(:get, fuzzy_url).to_return(status: 200, body: card_hash.to_json)
+      end
+
+      it "falls back to a fuzzy lookup for the whole batch" do
+        result = service.find_cards_by_names(names)
+        expect(result).to eq(card_hash["name"] => card_hash)
+      end
+    end
+  end
 end

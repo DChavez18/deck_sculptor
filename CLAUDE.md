@@ -241,6 +241,19 @@ Scoring weights: +8 high synergy (>=0.3), +6 commander staple (>=0.1), +4
 popular pick (>0). Card limit: 60. If the structure changes at EDHREC's
 end, this is where to look first.
 
+**Bulk card import via the collection endpoint**
+`DeckImportsController#create` resolves cache-miss decklist names through
+`ScryfallService#find_cards_by_names`, which batches up to 75 names per POST
+to `/cards/collection` instead of one `/cards/named` GET per card. This is
+why large decklist imports used to drop cards to Scryfall rate limiting
+(~90 individual GET calls per import) — the collection endpoint turns that
+into 1-2 POST calls. The collection endpoint only does exact (case-insensitive)
+name matching, no fuzzy tolerance for typos/variant spellings, so any name it
+can't resolve falls back to the existing fuzzy `find_card_by_name` (with its
+retry/backoff) one at a time — this keeps typo tolerance for the rare miss
+without reintroducing rate-limit risk for the common case where nearly
+everything resolves in the bulk call.
+
 **Scryfall oracle tag queries**
 All `ScryfallService#cards_by_function` queries include
 `-is:digital game:paper legal:commander`. The correct Scryfall oracle tag
