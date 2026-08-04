@@ -5,6 +5,7 @@ class ScryfallService
   RATE_LIMIT_DELAY = 0.15
   MAX_RETRIES = 3
   RETRY_BACKOFF = 1.0
+  COLLECTION_BATCH_SIZE = 75
 
   def search_commander(name)
     query = "name:#{name} is:commander legal:commander"
@@ -97,6 +98,14 @@ class ScryfallService
     parse_list_response(response)
   end
 
+  def find_cards_by_names(names)
+    return {} if names.empty?
+
+    results = {}
+    names.each_slice(COLLECTION_BATCH_SIZE) { |batch| fetch_collection_batch(batch, results) }
+    results
+  end
+
   private
 
   def get_request(path, params = {})
@@ -115,6 +124,48 @@ class ScryfallService
   rescue StandardError => e
     Rails.logger.error("ScryfallService error: #{e.message}")
     nil
+  end
+
+  def post_request(path, body)
+    HTTParty.post("#{BASE_URL}#{path}", body: body.to_json, headers: { "Content-Type" => "application/json" })
+  rescue StandardError => e
+    Rails.logger.error("ScryfallService error: #{e.message}")
+    nil
+  end
+
+  def fetch_collection_batch(batch, results)
+    response = post_request("/cards/collection", identifiers: batch.map { |name| { name: name } })
+
+    unless success?(response)
+      fetch_fuzzy_fallback(batch, results)
+      return
+    end
+
+    cards   = parse_body(response)["data"] || []
+    matched = store_and_map_collection_results(batch, cards, results)
+    fetch_fuzzy_fallback(batch - matched, results)
+  end
+
+  def store_and_map_collection_results(batch, cards, results)
+    matched = []
+
+    cards.each do |card|
+      CardCache.store(card["id"], card["name"], card)
+      original = batch.find { |name| name.casecmp?(card["name"]) }
+      next unless original
+
+      results[original] = card
+      matched << original
+    end
+
+    matched
+  end
+
+  def fetch_fuzzy_fallback(names, results)
+    names.each do |name|
+      card = find_card_by_name(name)
+      results[name] = card if card
+    end
   end
 
   def rate_limited?(response)
