@@ -136,14 +136,17 @@ class ScryfallService
   def fetch_collection_batch(batch, results)
     response = post_request("/cards/collection", identifiers: batch.map { |name| { name: name } })
 
-    unless success?(response)
-      fetch_fuzzy_fallback(batch, results)
-      return
-    end
+    unmatched =
+      if success?(response)
+        cards   = parse_body(response)["data"] || []
+        matched = store_and_map_collection_results(batch, cards, results)
+        batch - matched
+      else
+        batch
+      end
 
-    cards   = parse_body(response)["data"] || []
-    matched = store_and_map_collection_results(batch, cards, results)
-    fetch_fuzzy_fallback(batch - matched, results)
+    still_missing = fetch_fuzzy_fallback(unmatched, results)
+    fetch_flavor_fallback(still_missing, results)
   end
 
   def store_and_map_collection_results(batch, cards, results)
@@ -162,9 +165,25 @@ class ScryfallService
   end
 
   def fetch_fuzzy_fallback(names, results)
-    names.each do |name|
+    names.each_with_object([]) do |name, missing|
       card = find_card_by_name(name)
-      results[name] = card if card
+      if card
+        results[name] = card
+      else
+        missing << name
+      end
+    end
+  end
+
+  def fetch_flavor_fallback(names, results)
+    names.each do |name|
+      response = get_request("/cards/search", q: %(flavor:"#{name}"), unique: "cards")
+      cards = parse_list_response(response)
+      next if cards.empty?
+
+      card = cards.first
+      CardCache.store(card["id"], card["name"], card)
+      results[name] = card
     end
   end
 

@@ -531,8 +531,11 @@ RSpec.describe ScryfallService, type: :service do
       end
 
       context "when the fuzzy fallback also fails" do
+        let(:flavor_url) { "#{base_url}/cards/search?q=flavor%3A%22Sol+Rng%22&unique=cards" }
+
         before do
           stub_request(:get, fuzzy_url).to_return(status: 404, body: not_found_response)
+          stub_request(:get, flavor_url).to_return(status: 404, body: not_found_response)
         end
 
         it "omits the unresolved name from the result" do
@@ -542,12 +545,62 @@ RSpec.describe ScryfallService, type: :service do
       end
     end
 
+    context "when a name misses both collection and fuzzy but matches a flavor name" do
+      let(:names) { [ "Aang's Shelter" ] }
+      let(:teferis_protection) do
+        { "id" => "teferis-protection-id", "name" => "Teferi's Protection" }
+      end
+      let(:fuzzy_url) { "#{base_url}/cards/named?fuzzy=#{URI.encode_www_form_component("Aang's Shelter")}" }
+      let(:flavor_url) { "#{base_url}/cards/search?q=flavor%3A%22Aang%27s+Shelter%22&unique=cards" }
+
+      before do
+        stub_request(:post, collection_url)
+          .with(body: { identifiers: [ { name: "Aang's Shelter" } ] })
+          .to_return(status: 200, body: { data: [], not_found: [ { name: "Aang's Shelter" } ] }.to_json)
+        stub_request(:get, fuzzy_url).to_return(status: 404, body: not_found_response)
+        stub_request(:get, flavor_url).to_return(
+          status: 200, body: { "data" => [ teferis_protection ], "total_cards" => 1 }.to_json
+        )
+      end
+
+      it "populates the result with the oracle-named card" do
+        result = service.find_cards_by_names(names)
+        expect(result).to eq("Aang's Shelter" => teferis_protection)
+      end
+
+      it "stores the card in CardCache under its real name" do
+        expect { service.find_cards_by_names(names) }
+          .to change(CardCache, :count).by(1)
+        expect(CardCache.fetch_by_name("Teferi's Protection")).to eq(teferis_protection)
+      end
+    end
+
+    context "when a name misses collection, fuzzy, and flavor search" do
+      let(:names) { [ "Totally Not A Card" ] }
+      let(:fuzzy_url) { "#{base_url}/cards/named?fuzzy=#{URI.encode_www_form_component('Totally Not A Card')}" }
+      let(:flavor_url) { "#{base_url}/cards/search?q=flavor%3A%22Totally+Not+A+Card%22&unique=cards" }
+
+      before do
+        stub_request(:post, collection_url)
+          .with(body: { identifiers: [ { name: "Totally Not A Card" } ] })
+          .to_return(status: 200, body: { data: [], not_found: [ { name: "Totally Not A Card" } ] }.to_json)
+        stub_request(:get, fuzzy_url).to_return(status: 404, body: not_found_response)
+        stub_request(:get, flavor_url).to_return(status: 404, body: not_found_response)
+      end
+
+      it "omits the unresolved name from the result" do
+        result = service.find_cards_by_names(names)
+        expect(result).to eq({})
+      end
+    end
+
     context "when given more than 75 names" do
       let(:names) { (1..80).map { |i| "Card #{i}" } }
 
       before do
         stub_request(:post, collection_url).to_return(status: 200, body: { data: [], not_found: [] }.to_json)
         allow(service).to receive(:find_card_by_name).and_return(nil)
+        allow(service).to receive(:fetch_flavor_fallback)
       end
 
       it "splits the request into two batches" do
