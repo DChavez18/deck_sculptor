@@ -254,6 +254,19 @@ retry/backoff) one at a time — this keeps typo tolerance for the rare miss
 without reintroducing rate-limit risk for the common case where nearly
 everything resolves in the bulk call.
 
+**Import name-matching gaps (split cards and flavor names)**
+Two more causes of dropped decklist cards, both fixed in Phase 29. (1)
+Split/adventure cards exported with a single slash (`"Card A / Card B"`)
+never match Scryfall's canonical `" // "` double-slash name — fixed by
+`DecklistParser#normalize_split_name`, which runs on every parsed line
+before lookup. (2) Universes Beyond crossover printings exported under
+their flavor name (e.g. `"Aang's Shelter"` for `"Teferi's Protection"`)
+match neither the collection endpoint nor fuzzy `/cards/named`, since
+neither searches `flavor_name`. `ScryfallService#fetch_flavor_fallback`
+adds a third and final tier to `fetch_collection_batch` — an exact
+`flavor:"..."` search — that only runs on names still unresolved after
+collection and fuzzy both miss.
+
 **Scryfall oracle tag queries**
 All `ScryfallService#cards_by_function` queries include
 `-is:digital game:paper legal:commander`. The correct Scryfall oracle tag

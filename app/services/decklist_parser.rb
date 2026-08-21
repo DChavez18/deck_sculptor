@@ -29,9 +29,14 @@ class DecklistParser
     clean = clean.sub(/\s*\*[A-Za-z]\*\s*\z/, "").strip
 
     if (m = clean.match(/\A(\d+)x?\s+(.+)\z/))
-      { name: m[2].strip, quantity: m[1].to_i }
+      { name: normalize_split_name(m[2].strip), quantity: m[1].to_i }
     elsif clean.present?
-      { name: clean, quantity: 1 }
+      { name: normalize_split_name(clean), quantity: 1 }
     end
+  end
+
+  def normalize_split_name(name)
+    return name if name.include?("//")
+    name.sub(%r{\A(.+?)\s/\s(.+)\z}, '\1 // \2')
   end
 end

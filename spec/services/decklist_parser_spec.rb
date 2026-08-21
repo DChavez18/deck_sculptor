@@ -162,6 +162,34 @@ RSpec.describe DecklistParser do
       end
     end
 
+    context "single-slash split card name" do
+      let(:text) { "1 The Arkenstone / Seek the Heart" }
+
+      it "normalizes to Scryfall's double-slash format" do
+        expect(parser.parse).to eq([
+          { name: "The Arkenstone // Seek the Heart", quantity: 1 }
+        ])
+      end
+    end
+
+    context "split card name already in double-slash format" do
+      let(:text) { "1 The Arkenstone // Seek the Heart" }
+
+      it "leaves the name untouched" do
+        expect(parser.parse).to eq([
+          { name: "The Arkenstone // Seek the Heart", quantity: 1 }
+        ])
+      end
+    end
+
+    context "card name with no slash" do
+      let(:text) { "1 Sol Ring" }
+
+      it "leaves the name untouched" do
+        expect(parser.parse).to eq([ { name: "Sol Ring", quantity: 1 } ])
+      end
+    end
+
     context "empty input" do
       let(:text) { "" }
 

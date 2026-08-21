@@ -148,6 +148,7 @@ bundle exec brakeman --no-pager
 | 26 | Scryfall 429 retry backoff in get_request (3 retries with increasing backoff) |
 | 27 | Fix deck stats turbo stream (wrong target ID), extract Building Toward to partial, persist oracle_text/raw_data on import, bulk CardCache pre-check |
 | 28 | Bulk Scryfall collection API for imports, eliminating rate limiting on large decklists |
+| 29 | Fix import name-matching: normalize single-slash split cards to Scryfall's "//" format, add flavor-name search fallback for Universes Beyond reflavored printings |
 
 ## Roadmap
 
